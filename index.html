@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#d4c444" />
+    <title>FBX Viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./main.js"></script>
+  </head>
+  <body>
+    <main id="viewer" aria-label="Interactive 3D model viewer">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <div id="name-backdrop" aria-hidden="true"><span class="name-word">Zhan</span><span class="name-word">Feng</span></div>
+      <div id="canvas-host"></div>
+      <section id="loading-screen" role="status" aria-label="Loading 3D model">
+        <div class="loader-monogram" aria-hidden="true">
+          <span class="loader-letter">
+            <span class="loader-letter-base">Z</span>
+            <span class="loader-monogram-fill">Z</span>
+          </span>
+          <span class="loader-letter">
+            <span class="loader-letter-base">F</span>
+            <span class="loader-monogram-fill">F</span>
+          </span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
