@@ -1,0 +1,46 @@
+{
+  "model_source": "Looking Around",
+  "rig_source": "Standing Up",
+  "clips": [
+    {
+      "name": "Standing Up",
+      "frames": [
+        1.0,
+        145.0
+      ],
+      "duration_seconds": 4.8
+    },
+    {
+      "name": "Sitting Idle",
+      "frames": [
+        1.0,
+        327.0
+      ],
+      "duration_seconds": 10.866666666666667
+    },
+    {
+      "name": "Looking Around",
+      "frames": [
+        1.0,
+        554.0
+      ],
+      "duration_seconds": 18.433333333333334
+    }
+  ],
+  "rig_comparison": [
+    {
+      "source": "Sitting Idle",
+      "maximum_matrix_difference": 0.00860595703125,
+      "maximum_rotation_difference": 0.0004547295404861984
+    },
+    {
+      "source": "Looking Around",
+      "maximum_matrix_difference": 0.00860595703125,
+      "maximum_rotation_difference": 0.0004547295404861984
+    }
+  ],
+  "mesh_count": 2,
+  "rig_count": 1,
+  "bone_count": 65,
+  "fps": 30
+}

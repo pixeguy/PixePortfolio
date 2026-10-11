@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { projects } from './projects.js';
-import { createSpaceBackground, nebulaNoise } from './space-background.js';
+import { createSpaceBackground, nebulaNoise, NEBULA_MOTION } from './space-background.js';
 
 const host = document.querySelector('#canvas-host');
 const loadingScreen = document.querySelector('#loading-screen');
@@ -14,6 +14,8 @@ const spaceBackground = createSpaceBackground(host, nebulaCanvas, starCanvas);
 let modelTransform = null;
 let modelMotion = null;
 let modelPlacement = null;
+let modelMixer = null;
+let modelAnimation = null;
 const pointer = { x: 0, y: 0 };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let scrollTarget = window.scrollY;
@@ -47,13 +49,13 @@ const projectList = document.querySelector('#project-list');
 const projectOutlines = [];
 let lastOutlineFrame = -Infinity;
 function animateProjectOutlines(time) {
-  if (reducedMotion.matches || time - lastOutlineFrame < 50) return;
+  if (reducedMotion.matches || time - lastOutlineFrame < 33) return;
   lastOutlineFrame = time;
   for (const outline of projectOutlines) {
     if (outline.entry.closest('[hidden]')) continue;
     const bounds = outline.entry.getBoundingClientRect();
     if (bounds.bottom < 0 || bounds.top > window.innerHeight) continue;
-    const flow = time * 0.00008 + outline.phase;
+    const flow = time * NEBULA_MOTION.flowRate * outline.speed * 2.2 + outline.phase;
     const offsets = outline.points.map(point => ({
       x: (nebulaNoise(point.x * .003 + flow, point.y * .004 - flow * .53) - .5) * 32,
       y: (nebulaNoise(point.x * .004 - flow * .8 + 17, point.y * .003 + flow * .67) - .5) * 24,
@@ -87,6 +89,9 @@ window.addEventListener('pointercancel', () => {
 function createProjectEntry(project) {
   const entry = document.createElement('article');
   entry.className = 'project-entry';
+  const surface = document.createElement('div');
+  surface.className = 'project-surface';
+  entry.append(surface);
   const svgNamespace = 'http://www.w3.org/2000/svg';
   const outline = document.createElementNS(svgNamespace, 'svg');
   outline.classList.add('project-outline');
@@ -103,7 +108,8 @@ function createProjectEntry(project) {
     const count = command === 'M' ? 1 : command === 'C' ? 3 : 0;
     for (let j = 0; j < count; j += 1) points.push({ x: Number(tokens[i++]), y: Number(tokens[i++]) });
   }
-  projectOutlines.push({ entry, path: contour, commands, points, phase: projectOutlines.length * 13.7 });
+  projectOutlines.push({ entry, path: contour, commands, points, phase: projectOutlines.length * 13.7,
+    speed: NEBULA_MOTION.minimumSpeed + Math.random() * NEBULA_MOTION.speedVariation });
   entry.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !project.href) return;
     entry.classList.remove('is-released');
@@ -111,7 +117,7 @@ function createProjectEntry(project) {
   });
   entry.addEventListener('pointerleave', () => entry.classList.remove('is-pressed', 'is-released'));
   outline.append(contour);
-  entry.append(outline);
+  surface.append(outline);
   const heading = document.createElement('h2');
   heading.id = `project-${project.id}`;
   heading.textContent = project.title;
@@ -124,14 +130,17 @@ function createProjectEntry(project) {
   image.decoding = 'async';
   const description = document.createElement('p');
   description.textContent = project.description;
+  const content = document.createElement('div');
+  content.className = 'project-content';
+  content.append(heading, image, description);
   if (project.href) {
     const link = document.createElement('a');
     link.className = 'project-link';
     link.href = project.href;
-    link.append(heading, image, description);
-    entry.append(link);
+    link.append(content);
+    surface.append(link);
   } else {
-    entry.append(heading, image, description);
+    surface.append(content);
   }
   return entry;
 }
@@ -344,8 +353,52 @@ function setLoadingProgress(progress) {
   }
 }
 
+function initializeModelAnimation(fbx) {
+  const findClip = name => fbx.animations.find(clip => clip.name.toLowerCase().includes(name));
+  const looking = findClip('looking around');
+  const standing = findClip('standing up');
+  const sitting = findClip('sitting idle');
+  if (!looking || !standing || !sitting) {
+    showError('The combined FBX needs Looking Around, Standing Up, and Sitting Idle animations.');
+    return false;
+  }
+  modelMixer = new THREE.AnimationMixer(fbx);
+  const lookingAction = modelMixer.clipAction(looking).setLoop(THREE.LoopRepeat, Infinity);
+  const sittingAction = modelMixer.clipAction(sitting).setLoop(THREE.LoopRepeat, Infinity);
+  const transition = modelMixer.clipAction(standing).setLoop(THREE.LoopOnce, 1);
+  transition.clampWhenFinished = true;
+  lookingAction.reset().setEffectiveWeight(1).play();
+  sittingAction.reset().setEffectiveWeight(0).play();
+  transition.reset().setEffectiveWeight(0).play();
+  // This action is sampled by scroll position, never advanced by elapsed time.
+  transition.paused = true;
+  transition.time = standing.duration;
+  modelAnimation = { looking: lookingAction, sitting: sittingAction, transition };
+  modelMixer.update(0);
+  return true;
+}
+
+function updateModelAnimation(delta) {
+  if (!modelAnimation) return;
+  const { looking, sitting, transition } = modelAnimation;
+  // Finish sitting as the menu approaches the top of the viewport.
+  const scrollDistance = Math.max(host.clientHeight * 0.9, 1);
+  const progress = loadingScreen.hidden
+    ? THREE.MathUtils.clamp(window.scrollY / scrollDistance, 0, 1) : 0;
+  const lookingWeight = 1 - THREE.MathUtils.smoothstep(progress, 0, 0.08);
+  const sittingWeight = THREE.MathUtils.smoothstep(progress, 0.92, 1);
+  looking.setEffectiveWeight(lookingWeight);
+  sitting.setEffectiveWeight(sittingWeight);
+  transition.setEffectiveWeight(1 - lookingWeight - sittingWeight);
+  transition.time = (1 - progress) * transition.getClip().duration;
+  // Idle loops run only at the ends. Stopping anywhere in between holds the pose.
+  looking.paused = progress > 0;
+  sitting.paused = progress < 1;
+  modelMixer.update(delta);
+}
+
 new FBXLoader().load(
-  './Untitled.fbx',
+  './assets/Standing Up Combined.fbx',
   (fbx) => {
     let meshCount = 0;
     fbx.traverse((child) => {
@@ -354,6 +407,7 @@ new FBXLoader().load(
       child.material = wireMaterial;
       child.castShadow = false;
       child.receiveShadow = false;
+      if (child.isSkinnedMesh) child.frustumCulled = false;
       meshCount += 1;
     });
 
@@ -362,6 +416,8 @@ new FBXLoader().load(
       return;
     }
 
+    if (!initializeModelAnimation(fbx)) return;
+    // Fit the model using the opening pose of its default animation.
     fitModel(fbx);
     setLoadingProgress(100);
     dismissLoadingScreen();
@@ -372,7 +428,7 @@ new FBXLoader().load(
       setLoadingProgress(percent);
     }
   },
-  (error) => showError('Could not load Untitled.fbx. Start the site with Start Viewer.cmd and check that Untitled.fbx is beside index.html.', error),
+  (error) => showError('Could not load the combined FBX. Start the site with Start Viewer.cmd and check assets/Standing Up Combined.fbx.', error),
 );
 
 function resize() {
@@ -402,6 +458,7 @@ renderer.setAnimationLoop(() => {
     window.scrollTo({ top: next, behavior: 'instant' });
     if (Math.abs(remaining) < 0.75) scrollAnimating = false;
   }
+  updateModelAnimation(delta);
   if (modelPlacement) {
     const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
     const progress = THREE.MathUtils.smoothstep(window.scrollY / Math.max(host.clientHeight, 1), 0, 0.7);

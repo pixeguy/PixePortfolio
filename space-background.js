@@ -1,3 +1,5 @@
+export const NEBULA_MOTION = { flowRate: 0.000035, minimumSpeed: 3, speedVariation: 0.25 };
+
 const math = {
   lerp: (a, b, t) => a + (b - a) * t,
   clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
@@ -52,7 +54,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
       radiusY: minDimension * (0.07 + Math.random() * 0.196),
       rotation: Math.random() * Math.PI * 2,
       phase: Math.random() * Math.PI * 2,
-      speed: 3 + Math.random() * 0.25,
+      speed: NEBULA_MOTION.minimumSpeed + Math.random() * NEBULA_MOTION.speedVariation,
       color: colors[Math.floor(Math.random() * colors.length)],
       opacity: 0.25 + Math.random() * 0.16,
       radii: Array.from({ length: 11 }, () => 0.66 + Math.random() * 0.48),
@@ -114,7 +116,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
 
   function nebulaShape(blob, time) {
     const phase = time * 0.00016 * blob.speed + blob.phase;
-    const flow = time * 0.000035 * blob.speed;
+    const flow = time * NEBULA_MOTION.flowRate * blob.speed;
     const rotation = blob.rotation + Math.sin(phase * 0.44) * 0.08;
     const connection = blob.link ? nebulaConnection(blob.link.link, time) : 0;
     const link = blob.link?.link;

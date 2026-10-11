@@ -4,7 +4,7 @@ export const projects = [
   {
     id: 'freya',
     title: 'Freya',
-    image: './assets/freya-thumbnail-19x6.png',
+    image: './assets/freya-thumbnail-16x9.png',
     imageAlt: 'Illustrated cat portraits from Freya',
     description: 'A project exploring illustrated characters and visual storytelling.',
     href: './freya.html',

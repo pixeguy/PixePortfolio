@@ -165,14 +165,13 @@ body { background: #030306; }
   position: relative;
   isolation: isolate;
   margin-left: clamp(.75rem, 2vw, 2rem);
-  padding: clamp(1.75rem, 4vw, 4rem);
   background: transparent;
 }
 .project-outline {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -.75rem -.75rem -1.5rem;
+  width: calc(100% + 1.5rem);
+  height: calc(100% + 2.25rem);
   z-index: -1;
   overflow: visible;
   pointer-events: none;
@@ -184,20 +183,32 @@ body { background: #030306; }
   vector-effect: non-scaling-stroke;
 }
 @media (max-width: 700px) {
-  .project-entry { margin-left: .5rem; padding: 1.5rem 1.25rem; }
+  .project-entry { margin-left: .5rem; }
+  .project-surface { padding: 1.5rem 1.25rem; }
 }
 
-.project-entry { transform-origin: center; transition: transform 180ms ease; }
-@media (hover: hover) {
-  .project-entry:has(.project-link):hover:not(.is-released):not(.is-pressed) { transform: scale(1.035); }
+/* The outline and content share the hover and press transform. */
+.project-surface {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(1.75rem, 4vw, 4rem);
+  transform-origin: center;
+  transition: transform 180ms ease;
 }
-.project-entry.is-pressed { transform: scale(.97); transition-duration: 90ms; }
-.project-entry.is-released { transform: scale(1); }
+@media (hover: hover) {
+  .project-entry:has(.project-link):hover:not(.is-released):not(.is-pressed) .project-surface { transform: scale(1.06); }
+}
+.project-entry.is-pressed .project-surface { transform: scale(.95); transition-duration: 90ms; }
+.project-entry.is-released .project-surface { transform: scale(1); }
 /* Extend the native link to include the transparent padding inside the outline. */
 .project-link::after { content: ''; position: absolute; inset: 0; }
 .project-entry:has(.project-link:focus-visible) { outline: 1px solid #d4c444; outline-offset: 6px; }
 .project-page #viewer { height: 100svh; min-height: 100svh; }
 .project-page { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
-  .project-entry { transition: none; }
+  .project-surface { transition: none; }
+}
+
+@media (max-width: 700px) {
+  .project-surface { padding: 1.5rem 1.25rem; }
 }
