@@ -15,7 +15,7 @@ body { background: #030306; }
 #viewer {
   position: relative;
   isolation: isolate;
-  min-height: 220svh;
+  min-height: 300svh;
   background: #030306;
 }
 
