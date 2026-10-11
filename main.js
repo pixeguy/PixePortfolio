@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { projects } from './projects.js';
+import { createProjectNavigation } from './page-navigation.js';
 import { createSpaceBackground, nebulaNoise, NEBULA_MOTION } from './space-background.js';
 
 const host = document.querySelector('#canvas-host');
@@ -11,11 +12,11 @@ const minimumLoadingDuration = 1000;
 const nebulaCanvas = document.querySelector('#nebula');
 const starCanvas = document.querySelector('#starfield');
 const spaceBackground = createSpaceBackground(host, nebulaCanvas, starCanvas);
-let modelTransform = null;
 let modelMotion = null;
 let modelPlacement = null;
 let modelMixer = null;
 let modelAnimation = null;
+const modelLiftAxis = new THREE.Vector3();
 const pointer = { x: 0, y: 0 };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let scrollTarget = window.scrollY;
@@ -25,7 +26,7 @@ let lastFrameTime = performance.now();
 // Native document scrolling retains the scrollbar, keyboard, and touch behavior.
 // Wheel input eases toward its destination in the existing animation loop.
 window.addEventListener('wheel', (event) => {
-  if (event.ctrlKey || reducedMotion.matches || !loadingScreen.hidden
+  if (event.ctrlKey || reducedMotion.matches || document.documentElement.classList.contains('project-view-open') || !loadingScreen.hidden
       || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
   const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
   const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -45,32 +46,57 @@ window.addEventListener('keydown', (event) => {
   if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stopScrollEasing();
 });
 
+const projectNavigation = createProjectNavigation(reducedMotion);
 const projectList = document.querySelector('#project-list');
 const projectOutlines = [];
-let lastOutlineFrame = -Infinity;
+const outlineVisibility = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    const motion = projectOutlines.find(outline => outline.entry === entry.target);
+    if (motion) motion.visible = entry.isIntersecting;
+  });
+}, { rootMargin: '80px' });
+
+function sampleOutlineOffsets(outline, time) {
+  const flow = time * NEBULA_MOTION.flowRate * outline.speed * 2.2 + outline.phase;
+  const offsets = outline.points.map(point => ({
+    x: (nebulaNoise(point.x * .003 + flow, point.y * .004 - flow * .53) - .5) * 32,
+    y: (nebulaNoise(point.x * .004 - flow * .8 + 17, point.y * .003 + flow * .67) - .5) * 24,
+  }));
+  const meanX = offsets.reduce((sum, point) => sum + point.x, 0) / offsets.length;
+  const meanY = offsets.reduce((sum, point) => sum + point.y, 0) / offsets.length;
+  offsets.forEach(point => { point.x -= meanX; point.y -= meanY; });
+  return offsets;
+}
+
 function animateProjectOutlines(time) {
-  if (reducedMotion.matches || time - lastOutlineFrame < 33) return;
-  lastOutlineFrame = time;
+  if (reducedMotion.matches || document.body.classList.contains('is-project-view')) return;
   for (const outline of projectOutlines) {
-    if (outline.entry.closest('[hidden]')) continue;
-    const bounds = outline.entry.getBoundingClientRect();
-    if (bounds.bottom < 0 || bounds.top > window.innerHeight) continue;
-    const flow = time * NEBULA_MOTION.flowRate * outline.speed * 2.2 + outline.phase;
-    const offsets = outline.points.map(point => ({
-      x: (nebulaNoise(point.x * .003 + flow, point.y * .004 - flow * .53) - .5) * 32,
-      y: (nebulaNoise(point.x * .004 - flow * .8 + 17, point.y * .003 + flow * .67) - .5) * 24,
-    }));
-    // Remove shared translation so the border deforms without drifting.
-    const meanX = offsets.reduce((sum, point) => sum + point.x, 0) / offsets.length;
-    const meanY = offsets.reduce((sum, point) => sum + point.y, 0) / offsets.length;
+    if (!outline.visible) continue;
+    // Sample the slow organic motion at 10 Hz; interpolate its cached points
+    // every display frame. The ripple needs no noise or geometry measurements.
+    const tick = Math.floor(time / 100);
+    if (outline.noiseTick !== tick) {
+      outline.offsetStart = outline.noiseTick === tick - 1 ? outline.offsetEnd : sampleOutlineOffsets(outline, tick * 100);
+      outline.offsetEnd = sampleOutlineOffsets(outline, (tick + 1) * 100);
+      outline.noiseTick = tick;
+    }
+    const fraction = (time - tick * 100) / 100;
     let index = 0;
     outline.path.setAttribute('d', outline.commands.map(command => {
       if (command === 'Z') return command;
       const count = command === 'M' ? 1 : 3;
       const coordinates = [];
       for (let i = 0; i < count; i += 1) {
-        const point = outline.points[index], offset = offsets[index];
-        coordinates.push((point.x + offset.x - meanX).toFixed(2), (point.y + offset.y - meanY).toFixed(2));
+        const point = outline.points[index];
+        const start = outline.offsetStart[index], end = outline.offsetEnd[index];
+        const x = start.x + (end.x - start.x) * fraction;
+        const y = start.y + (end.y - start.y) * fraction;
+        const waveTime = (time - outline.rippleAt) / 1000 - point.rippleDelay;
+        // Restore the original short, damped ripple; retain cached geometry.
+        const ripple = waveTime >= 0 && waveTime <= 0.5
+          ? Math.sin(waveTime / 0.5 * Math.PI * 4) * Math.exp(-waveTime * 4.5) * 12 : 0;
+        coordinates.push((point.x + x + point.normalX * ripple).toFixed(2),
+          (point.y + y + point.normalY * ripple).toFixed(2));
         index += 1;
       }
       return command + ' ' + coordinates.join(' ');
@@ -108,8 +134,30 @@ function createProjectEntry(project) {
     const count = command === 'M' ? 1 : command === 'C' ? 3 : 0;
     for (let j = 0; j < count; j += 1) points.push({ x: Number(tokens[i++]), y: Number(tokens[i++]) });
   }
-  projectOutlines.push({ entry, path: contour, commands, points, phase: projectOutlines.length * 13.7,
-    speed: NEBULA_MOTION.minimumSpeed + Math.random() * NEBULA_MOTION.speedVariation });
+  points.forEach(point => {
+    point.angle = Math.atan2((point.y - 325) / 325, (point.x - 500) / 500);
+    point.normalX = Math.cos(point.angle);
+    point.normalY = Math.sin(point.angle) * 0.65;
+    point.rippleDelay = 0;
+  });
+  const outlineMotion = { entry, path: contour, commands, points, phase: projectOutlines.length * 13.7,
+    speed: NEBULA_MOTION.minimumSpeed + Math.random() * NEBULA_MOTION.speedVariation,
+    rippleAt: -Infinity, rippleOrigin: 0, visible: false, noiseTick: -Infinity };
+  projectOutlines.push(outlineMotion);
+  outlineVisibility.observe(entry);
+  entry.addEventListener('pointerenter', event => {
+    if (reducedMotion.matches || event.pointerType === 'touch' || !project.href) return;
+    const bounds = surface.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+    outlineMotion.rippleOrigin = Math.atan2(y, x);
+    points.forEach(point => {
+      const distance = Math.abs(Math.atan2(Math.sin(point.angle - outlineMotion.rippleOrigin),
+        Math.cos(point.angle - outlineMotion.rippleOrigin)));
+      point.rippleDelay = distance / Math.PI * 0.1;
+    });
+    outlineMotion.rippleAt = performance.now() - 45;
+  });
   entry.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !project.href) return;
     entry.classList.remove('is-released');
@@ -137,6 +185,12 @@ function createProjectEntry(project) {
     const link = document.createElement('a');
     link.className = 'project-link';
     link.href = project.href;
+    link.addEventListener('click', event => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      if (new URL(link.href).origin !== location.origin) return;
+      event.preventDefault();
+      projectNavigation.open(link.href);
+    });
     link.append(content);
     surface.append(link);
   } else {
@@ -184,7 +238,6 @@ window.addEventListener('pointerleave', () => {
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 5000);
-const defaultTarget = new THREE.Vector3();
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -253,7 +306,7 @@ function fitModel(object) {
   // Keep translation and scale in the same parent transform. Translating the
   // FBX root by an unscaled center makes models authored far from the origin
   // disappear outside the camera frustum.
-  modelTransform = new THREE.Group();
+  const modelTransform = new THREE.Group();
   modelTransform.scale.setScalar(modelScale);
   modelTransform.position.copy(center).multiplyScalar(-modelScale);
   modelTransform.add(object);
@@ -381,8 +434,7 @@ function updateModelAnimation(delta) {
   if (!modelAnimation) return;
   const { looking, sitting, transition } = modelAnimation;
   const viewportHeight = Math.max(host.clientHeight, 1);
-  // Start just below the banner and scrub across 1.8 screens: twice the
-  // previous distance. Scroll position remains the sole driver of the pose.
+  // Start below the banner and scrub the pose across 1.5 screens.
   const start = viewportHeight * 0.08;
   const distance = viewportHeight * 1.5;
   const progress = loadingScreen.hidden
@@ -467,9 +519,13 @@ renderer.setAnimationLoop(() => {
     const originalOffset = THREE.MathUtils.clamp((aspect - 0.45) * 1.15, 0.12, 1.5);
     const viewWidth = 2 * camera.position.length() * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect;
     const rightOffset = Math.max(originalOffset, viewWidth * 0.29);
-    // Scroll shifts the model horizontally without changing its height or scale.
     modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion)
       .multiplyScalar(THREE.MathUtils.lerp(originalOffset, rightOffset, progress));
+    // Lift along screen-up as the sitting animation progresses, keeping feet in view.
+    const sittingProgress = THREE.MathUtils.clamp((window.scrollY / Math.max(host.clientHeight, 1) - 0.08) / 1.8, 0, 1);
+    const lift = (viewWidth / aspect) * 0.12 * THREE.MathUtils.smoothstep(sittingProgress, 0, 1);
+    modelLiftAxis.set(0, 1, 0).applyQuaternion(camera.quaternion).multiplyScalar(lift);
+    modelPlacement.position.add(modelLiftAxis);
   }
   if (modelMotion) {
     const targetRotationX = pointer.y * 0.1;
@@ -482,6 +538,7 @@ renderer.setAnimationLoop(() => {
     modelMotion.position.y += (targetOffsetY - modelMotion.position.y) * 0.055;
   }
   spaceBackground.draw(time);
+  projectNavigation.update(time);
   animateProjectOutlines(time);
-  renderer.render(scene, camera);
+  if (!document.body.classList.contains('is-project-view')) renderer.render(scene, camera);
 });

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#030306" />
+    <title>Surface Tension - Zhan Feng</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      } }
+    </script>
+    <script type="module" src="./project-page.js"></script>
+  </head>
+  <body class="project-page">
+    <main id="viewer" aria-label="Surface Tension">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <section class="project-page-content" data-project-content aria-label="Surface Tension project page">
+        <a class="project-back" data-back href="./index.html"><span aria-hidden="true">&#8592;</span> Back</a>
+        <header class="project-banner">
+          <svg class="project-banner-mask" viewBox="0 0 1000 650" preserveAspectRatio="none" role="img" aria-labelledby="surface-tension-banner-title">
+            <title id="surface-tension-banner-title">Surface Tension start screen</title>
+            <defs>
+              <clipPath id="surface-tension-banner-clip" clipPathUnits="userSpaceOnUse">
+                <path id="surface-tension-banner-shape" data-blob-mask d="M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z" />
+              </clipPath>
+            </defs>
+            <image href="./assets/surfaceTension-thumbnail.png" width="1000" height="650" preserveAspectRatio="none" clip-path="url(#surface-tension-banner-clip)" />
+            <use href="#surface-tension-banner-shape" fill="none" stroke="#d4c444" stroke-width="2" vector-effect="non-scaling-stroke" />
+          </svg>
+        </header>
+        <header class="project-heading">
+          <h1>Surface Tension</h1>
+          <div class="portfolio-divider" aria-hidden="true"></div>
+        </header>
+        <section class="project-body" aria-label="Surface Tension project content">
+          <div class="project-model-host" data-project-model="./assets/Mask.fbx" data-mirror="true" role="img" aria-label="Surface Tension mask model"></div>
+          <div class="project-details">
+            <iframe class="project-video" src="https://www.youtube.com/embed/UzaRi70BPrM" title="Surface Tension sample video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <div class="project-copy">
+              <p>Project overview coming soon. This section will introduce Surface Tension and its core gameplay.</p>
+              <p>More details about the development process, my contributions, and what I learned will go here. The video above and image below are placeholders for the project showcase.</p>
+            </div>
+            <img class="project-detail-image" src="./assets/surfaceTension-thumbnail.png" alt="Surface Tension start screen" loading="lazy"  />
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -2,11 +2,19 @@
 // Images are paths relative to index.html. Supply href when a project page is ready.
 export const projects = [
   {
-    id: 'freya',
-    title: 'Freya',
-    image: './assets/freya-thumbnail-16x9.png',
-    imageAlt: 'Illustrated cat portraits from Freya',
+    id: 'ahma',
+    title: "Ahma's Stray search",
+    image: './assets/ahma-thumbnail-16x9.png',
+    imageAlt: "Illustrated cat portraits from Ahma's Stray search",
     description: 'A project exploring illustrated characters and visual storytelling.',
-    href: './freya.html',
+    href: './ahma.html',
+  },
+  {
+    id: 'surface-tension',
+    title: 'Surface Tension',
+    image: './assets/surfaceTension-thumbnail.png',
+    imageAlt: 'Surface Tension Start Screen',
+    description: 'Explore Surface Tension. Project details coming soon.',
+    href: './surface-tension.html',
   },
 ];
