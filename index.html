@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="is-loading">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,6 +23,16 @@
       <canvas id="starfield" aria-hidden="true"></canvas>
       <div id="name-backdrop" aria-hidden="true"><span class="name-word">Zhan</span><span class="name-word">Feng</span></div>
       <div id="canvas-host"></div>
+      <section id="portfolio" aria-label="Portfolio">
+        <div class="portfolio-tabs" role="tablist" aria-label="Portfolio sections">
+          <button id="projects-tab" class="portfolio-tab" type="button" role="tab" aria-selected="true" aria-controls="projects-panel">Projects</button>
+          <span class="tab-divider" aria-hidden="true"></span>
+          <button id="devlog-tab" class="portfolio-tab" type="button" role="tab" aria-selected="false" aria-controls="devlog-panel" tabindex="-1">Devlog</button>
+        </div>
+        <div class="portfolio-divider" aria-hidden="true"></div>
+        <section id="projects-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="projects-tab" tabindex="0"><div id="project-list" class="project-list"></div></section>
+        <section id="devlog-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="devlog-tab" tabindex="0" hidden></section>
+      </section>
       <section id="loading-screen" role="status" aria-label="Loading 3D model">
         <div class="loader-monogram" aria-hidden="true">
           <span class="loader-letter">

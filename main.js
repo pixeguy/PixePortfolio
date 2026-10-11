@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { projects } from './projects.js';
+import { createSpaceBackground, nebulaNoise } from './space-background.js';
 
 const host = document.querySelector('#canvas-host');
 const loadingScreen = document.querySelector('#loading-screen');
@@ -7,143 +9,161 @@ const loadingProgress = document.querySelectorAll('.loader-monogram-fill');
 const loadingStartedAt = performance.now();
 const minimumLoadingDuration = 1000;
 const nebulaCanvas = document.querySelector('#nebula');
-const nebulaContext = nebulaCanvas.getContext('2d');
 const starCanvas = document.querySelector('#starfield');
-const starContext = starCanvas.getContext('2d');
-let stars = [];
-let nebulaBlobs = [];
-let starfieldWidth = 0;
-let starfieldHeight = 0;
+const spaceBackground = createSpaceBackground(host, nebulaCanvas, starCanvas);
 let modelTransform = null;
 let modelMotion = null;
 let modelPlacement = null;
 const pointer = { x: 0, y: 0 };
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let scrollTarget = window.scrollY;
+let scrollAnimating = false;
+let lastFrameTime = performance.now();
 
-function resizeNebula() {
-  const width = host.clientWidth;
-  const height = host.clientHeight;
-  if (!width || !height) return;
+// Native document scrolling retains the scrollbar, keyboard, and touch behavior.
+// Wheel input eases toward its destination in the existing animation loop.
+window.addEventListener('wheel', (event) => {
+  if (event.ctrlKey || reducedMotion.matches || !loadingScreen.hidden
+      || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+  const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  if (!scrollAnimating) scrollTarget = window.scrollY;
+  scrollTarget = THREE.MathUtils.clamp(scrollTarget + event.deltaY * unit, 0, maximum);
+  scrollAnimating = true;
+  event.preventDefault();
+}, { passive: false });
 
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-  nebulaCanvas.width = Math.round(width * pixelRatio);
-  nebulaCanvas.height = Math.round(height * pixelRatio);
-  nebulaContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  const minDimension = Math.min(width, height);
-  const colors = ['108,78,151', '86,62,130', '127,83,151', '65,70,131'];
-  const blobCount = Math.max(7, Math.floor((width * height) / 110000));
-  nebulaBlobs = Array.from({ length: blobCount }, () => ({
-    x: width * (0.04 + Math.random() * 0.92),
-    y: height * (0.04 + Math.random() * 0.92),
-    radiusX: minDimension * (0.075 + Math.random() * 0.16),
-    radiusY: minDimension * (0.05 + Math.random() * 0.14),
-    rotation: Math.random() * Math.PI * 2,
-    phase: Math.random() * Math.PI * 2,
-    speed: 0.45 + Math.random() * 0.65,
-    driftX: width * (0.012 + Math.random() * 0.025),
-    driftY: height * (0.012 + Math.random() * 0.025),
-    color: colors[Math.floor(Math.random() * colors.length)],
-    opacity: 0.25 + Math.random() * 0.16,
-    radii: Array.from({ length: 11 }, () => 0.66 + Math.random() * 0.48),
-  }));
+function stopScrollEasing() {
+  scrollAnimating = false;
+  scrollTarget = window.scrollY;
 }
+window.addEventListener('touchstart', stopScrollEasing, { passive: true });
+window.addEventListener('pointerdown', stopScrollEasing);
+window.addEventListener('keydown', (event) => {
+  if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stopScrollEasing();
+});
 
-function drawNebula(time) {
-  const width = host.clientWidth;
-  const height = host.clientHeight;
-  nebulaContext.clearRect(0, 0, width, height);
-  for (const blob of nebulaBlobs) {
-    const phase = time * 0.000055 * blob.speed + blob.phase;
-    const x = blob.x + Math.sin(phase) * blob.driftX;
-    const y = blob.y + Math.cos(phase * 0.83) * blob.driftY;
-    const rotation = blob.rotation + Math.sin(phase * 0.44) * 0.12;
-    const points = blob.radii.map((baseRadius, index) => {
-      const angle = rotation + (index / blob.radii.length) * Math.PI * 2;
-      const pulse = 1 + Math.sin(phase * 1.7 + index * 0.9) * 0.075;
-      const radius = baseRadius * pulse;
-      return {
-        x: x + Math.cos(angle) * blob.radiusX * radius,
-        y: y + Math.sin(angle) * blob.radiusY * radius,
-      };
-    });
-
-    const path = new Path2D();
-    const first = points[0];
-    const last = points[points.length - 1];
-    path.moveTo((first.x + last.x) / 2, (first.y + last.y) / 2);
-    for (let index = 0; index < points.length; index += 1) {
-      const current = points[index];
-      const next = points[(index + 1) % points.length];
-      path.quadraticCurveTo(current.x, current.y, (current.x + next.x) / 2, (current.y + next.y) / 2);
-    }
-    path.closePath();
-
-    const gradient = nebulaContext.createRadialGradient(
-      x - blob.radiusX * 0.18,
-      y - blob.radiusY * 0.2,
-      0,
-      x,
-      y,
-      Math.max(blob.radiusX, blob.radiusY) * 1.12,
-    );
-    gradient.addColorStop(0, `rgba(${blob.color},${blob.opacity})`);
-    gradient.addColorStop(0.62, `rgba(${blob.color},${blob.opacity * 0.72})`);
-    gradient.addColorStop(1, `rgba(${blob.color},${blob.opacity * 0.08})`);
-
-    nebulaContext.save();
-    nebulaContext.shadowColor = `rgba(${blob.color},${blob.opacity * 0.75})`;
-    nebulaContext.shadowBlur = Math.max(blob.radiusX, blob.radiusY) * 0.45;
-    nebulaContext.fillStyle = gradient;
-    nebulaContext.fill(path);
-    nebulaContext.restore();
+const projectList = document.querySelector('#project-list');
+const projectOutlines = [];
+let lastOutlineFrame = -Infinity;
+function animateProjectOutlines(time) {
+  if (reducedMotion.matches || time - lastOutlineFrame < 50) return;
+  lastOutlineFrame = time;
+  for (const outline of projectOutlines) {
+    if (outline.entry.closest('[hidden]')) continue;
+    const bounds = outline.entry.getBoundingClientRect();
+    if (bounds.bottom < 0 || bounds.top > window.innerHeight) continue;
+    const flow = time * 0.00008 + outline.phase;
+    const offsets = outline.points.map(point => ({
+      x: (nebulaNoise(point.x * .003 + flow, point.y * .004 - flow * .53) - .5) * 32,
+      y: (nebulaNoise(point.x * .004 - flow * .8 + 17, point.y * .003 + flow * .67) - .5) * 24,
+    }));
+    // Remove shared translation so the border deforms without drifting.
+    const meanX = offsets.reduce((sum, point) => sum + point.x, 0) / offsets.length;
+    const meanY = offsets.reduce((sum, point) => sum + point.y, 0) / offsets.length;
+    let index = 0;
+    outline.path.setAttribute('d', outline.commands.map(command => {
+      if (command === 'Z') return command;
+      const count = command === 'M' ? 1 : 3;
+      const coordinates = [];
+      for (let i = 0; i < count; i += 1) {
+        const point = outline.points[index], offset = offsets[index];
+        coordinates.push((point.x + offset.x - meanX).toFixed(2), (point.y + offset.y - meanY).toFixed(2));
+        index += 1;
+      }
+      return command + ' ' + coordinates.join(' ');
+    }).join(' '));
   }
 }
-
-function resizeStarfield() {
-  const width = host.clientWidth;
-  const height = host.clientHeight;
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  if (!width || !height) return;
-
-  starfieldWidth = width;
-  starfieldHeight = height;
-  starCanvas.width = Math.round(width * pixelRatio);
-  starCanvas.height = Math.round(height * pixelRatio);
-  starContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-  const starCount = Math.max(48, Math.floor((width * height) / 11000));
-  stars = Array.from({ length: starCount }, () => ({
-    x: Math.random() * width,
-    y: Math.random() * height,
-    size: Math.random() > 0.78 ? 2 : 1,
-    phase: Math.random() * Math.PI * 2,
-    speed: 0.45 + Math.random() * 1.4,
-    cross: Math.random() > 0.80,
-    color: Math.random() > 0.77 ? '#fff18a' : (Math.random() > 0.5 ? '#e5cf45' : '#bca735'),
-  }));
-}
-
-function drawStarfield(time) {
-  starContext.clearRect(0, 0, starfieldWidth, starfieldHeight);
-  for (const star of stars) {
-    const shimmer = 0.35 + (0.65 * (0.5 + 0.5 * Math.sin(time * 0.001 * star.speed + star.phase)));
-    const x = Math.round(star.x);
-    const y = Math.round(star.y);
-    starContext.globalAlpha = shimmer;
-    starContext.fillStyle = star.color;
-    starContext.fillRect(x, y, star.size, star.size);
-    if (star.cross) {
-      starContext.globalAlpha = shimmer * 0.82;
-      starContext.fillRect(x - 2, y + 1, 5, 1);
-      starContext.fillRect(x, y - 1, 1, 5);
-    }
+window.addEventListener('pointerup', () => {
+  document.querySelectorAll('.project-entry.is-pressed').forEach(entry => {
+    entry.classList.remove('is-pressed');
+    entry.classList.add('is-released');
+  });
+});
+window.addEventListener('pointercancel', () => {
+  document.querySelectorAll('.project-entry.is-pressed').forEach(entry => entry.classList.remove('is-pressed'));
+});
+function createProjectEntry(project) {
+  const entry = document.createElement('article');
+  entry.className = 'project-entry';
+  const svgNamespace = 'http://www.w3.org/2000/svg';
+  const outline = document.createElementNS(svgNamespace, 'svg');
+  outline.classList.add('project-outline');
+  outline.setAttribute('viewBox', '0 0 1000 650');
+  outline.setAttribute('preserveAspectRatio', 'none');
+  outline.setAttribute('aria-hidden', 'true');
+  const contour = document.createElementNS(svgNamespace, 'path');
+  contour.setAttribute('d', 'M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z');
+  const tokens = contour.getAttribute('d').match(/[MCZ]|-?[0-9.]+/g);
+  const commands = [], points = [];
+  for (let i = 0; i < tokens.length;) {
+    const command = tokens[i++];
+    commands.push(command);
+    const count = command === 'M' ? 1 : command === 'C' ? 3 : 0;
+    for (let j = 0; j < count; j += 1) points.push({ x: Number(tokens[i++]), y: Number(tokens[i++]) });
   }
-  starContext.globalAlpha = 1;
+  projectOutlines.push({ entry, path: contour, commands, points, phase: projectOutlines.length * 13.7 });
+  entry.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !project.href) return;
+    entry.classList.remove('is-released');
+    entry.classList.add('is-pressed');
+  });
+  entry.addEventListener('pointerleave', () => entry.classList.remove('is-pressed', 'is-released'));
+  outline.append(contour);
+  entry.append(outline);
+  const heading = document.createElement('h2');
+  heading.id = `project-${project.id}`;
+  heading.textContent = project.title;
+  entry.setAttribute('aria-labelledby', heading.id);
+  const image = document.createElement('img');
+  image.className = 'project-image';
+  image.src = project.image;
+  image.alt = project.imageAlt || project.title;
+  image.loading = 'lazy';
+  image.decoding = 'async';
+  const description = document.createElement('p');
+  description.textContent = project.description;
+  if (project.href) {
+    const link = document.createElement('a');
+    link.className = 'project-link';
+    link.href = project.href;
+    link.append(heading, image, description);
+    entry.append(link);
+  } else {
+    entry.append(heading, image, description);
+  }
+  return entry;
 }
+projectList.replaceChildren(...projects.map(createProjectEntry));
+
+const portfolioTabs = [...document.querySelectorAll('.portfolio-tab')];
+function selectPortfolioTab(selected) {
+  portfolioTabs.forEach(tab => {
+    const active = tab === selected;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+  });
+}
+portfolioTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectPortfolioTab(tab));
+  tab.addEventListener('keydown', event => {
+    let next;
+    if (event.key === 'ArrowRight') next = portfolioTabs[(index + 1) % portfolioTabs.length];
+    if (event.key === 'ArrowLeft') next = portfolioTabs[(index + portfolioTabs.length - 1) % portfolioTabs.length];
+    if (event.key === 'Home') next = portfolioTabs[0];
+    if (event.key === 'End') next = portfolioTabs[portfolioTabs.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    selectPortfolioTab(next);
+    next.focus({ preventScroll: true });
+  });
+});
 
 function updatePointer(event) {
-  const bounds = host.getBoundingClientRect();
-  pointer.x = THREE.MathUtils.clamp(((event.clientX - bounds.left) / bounds.width) * 2 - 1, -1, 1);
-  pointer.y = THREE.MathUtils.clamp(((event.clientY - bounds.top) / bounds.height) * 2 - 1, -1, 1);
+  pointer.x = THREE.MathUtils.clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
+  pointer.y = THREE.MathUtils.clamp((event.clientY / window.innerHeight) * 2 - 1, -1, 1);
 }
 
 window.addEventListener('pointermove', updatePointer);
@@ -236,7 +256,6 @@ function fitModel(object) {
   modelPlacement.add(modelMotion);
   scene.add(modelPlacement);
   modelPlacement.updateMatrixWorld(true);
-  updateModelLayout();
 
   const distance = 3.2 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * 0.96;
   camera.position.set(distance * 0.82, distance * 0.55, distance);
@@ -244,13 +263,16 @@ function fitModel(object) {
   camera.near = Math.max(distance / 1000, 0.001);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
+  updateModelLayout();
 
 }
 
 function updateModelLayout() {
   if (!modelPlacement) return;
   const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
-  modelPlacement.position.x = THREE.MathUtils.clamp((aspect - 0.45) * 0.8, 0.05, 0.95);
+  const offset = THREE.MathUtils.clamp((aspect - 0.45) * 1.15, 0.12, 1.5);
+  // Shift along the camera's horizontal axis so moving right cannot lower the model.
+  modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion).multiplyScalar(offset);
 }
 
 function showError(message, error) {
@@ -265,6 +287,7 @@ function dismissLoadingScreen() {
     loadingScreen.classList.add('is-leaving');
     window.setTimeout(() => {
       loadingScreen.hidden = true;
+      document.documentElement.classList.remove('is-loading');
       startTitleTypewriter();
     }, 720);
   }, remaining);
@@ -359,8 +382,7 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
-  resizeNebula();
-  resizeStarfield();
+  spaceBackground.resize();
   updateModelLayout();
 }
 
@@ -369,6 +391,27 @@ resize();
 
 renderer.setAnimationLoop(() => {
   const time = performance.now();
+  const delta = Math.min((time - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = time;
+  if (scrollAnimating) {
+    const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    scrollTarget = THREE.MathUtils.clamp(scrollTarget, 0, maximum);
+    const remaining = scrollTarget - window.scrollY;
+    const next = Math.abs(remaining) < 0.75 ? scrollTarget
+      : window.scrollY + remaining * (1 - Math.exp(-10 * delta));
+    window.scrollTo({ top: next, behavior: 'instant' });
+    if (Math.abs(remaining) < 0.75) scrollAnimating = false;
+  }
+  if (modelPlacement) {
+    const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
+    const progress = THREE.MathUtils.smoothstep(window.scrollY / Math.max(host.clientHeight, 1), 0, 0.7);
+    const originalOffset = THREE.MathUtils.clamp((aspect - 0.45) * 1.15, 0.12, 1.5);
+    const viewWidth = 2 * camera.position.length() * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect;
+    const rightOffset = Math.max(originalOffset, viewWidth * 0.29);
+    // Scroll shifts the model horizontally without changing its height or scale.
+    modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion)
+      .multiplyScalar(THREE.MathUtils.lerp(originalOffset, rightOffset, progress));
+  }
   if (modelMotion) {
     const targetRotationX = pointer.y * 0.1;
     const targetRotationY = pointer.x * 0.16;
@@ -379,7 +422,7 @@ renderer.setAnimationLoop(() => {
     modelMotion.position.x += (targetOffsetX - modelMotion.position.x) * 0.055;
     modelMotion.position.y += (targetOffsetY - modelMotion.position.y) * 0.055;
   }
-  drawNebula(time);
-  drawStarfield(time);
+  spaceBackground.draw(time);
+  animateProjectOutlines(time);
   renderer.render(scene, camera);
 });
