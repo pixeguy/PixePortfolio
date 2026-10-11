@@ -30,17 +30,17 @@
   "rig_comparison": [
     {
       "source": "Sitting Idle",
-      "maximum_matrix_difference": 0.00860595703125,
-      "maximum_rotation_difference": 0.0004547295404861984
+      "maximum_matrix_difference": 94.85553359985352,
+      "maximum_rotation_difference": 1.9166635274887085
     },
     {
       "source": "Looking Around",
-      "maximum_matrix_difference": 0.00860595703125,
-      "maximum_rotation_difference": 0.0004547295404861984
+      "maximum_matrix_difference": 94.85553359985352,
+      "maximum_rotation_difference": 1.9166635274887085
     }
   ],
   "mesh_count": 2,
   "rig_count": 1,
-  "bone_count": 65,
+  "bone_count": 78,
   "fps": 30
 }

@@ -367,38 +367,59 @@ function initializeModelAnimation(fbx) {
   const sittingAction = modelMixer.clipAction(sitting).setLoop(THREE.LoopRepeat, Infinity);
   const transition = modelMixer.clipAction(standing).setLoop(THREE.LoopOnce, 1);
   transition.clampWhenFinished = true;
-  lookingAction.reset().setEffectiveWeight(1).play();
-  sittingAction.reset().setEffectiveWeight(0).play();
-  transition.reset().setEffectiveWeight(0).play();
-  // This action is sampled by scroll position, never advanced by elapsed time.
-  transition.paused = true;
-  transition.time = standing.duration;
-  modelAnimation = { looking: lookingAction, sitting: sittingAction, transition };
+  lookingAction.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).play();
+  modelAnimation = {
+    looking: lookingAction, sitting: sittingAction, transition,
+    currentIdle: lookingAction, pose: 'standing', moving: false,
+    wantsSitting: false, direction: -1, completedDirection: null,
+  };
+  modelMixer.addEventListener('finished', event => {
+    if (event.action === transition) modelAnimation.completedDirection = event.direction;
+  });
   modelMixer.update(0);
   return true;
 }
 
 function updateModelAnimation(delta) {
   if (!modelAnimation) return;
-  const { looking, sitting, transition } = modelAnimation;
-  // Finish sitting as the menu approaches the top of the viewport.
-  const scrollDistance = Math.max(host.clientHeight * 0.9, 1);
-  const progress = loadingScreen.hidden
-    ? THREE.MathUtils.clamp(window.scrollY / scrollDistance, 0, 1) : 0;
-  const lookingWeight = 1 - THREE.MathUtils.smoothstep(progress, 0, 0.08);
-  const sittingWeight = THREE.MathUtils.smoothstep(progress, 0.92, 1);
-  looking.setEffectiveWeight(lookingWeight);
-  sitting.setEffectiveWeight(sittingWeight);
-  transition.setEffectiveWeight(1 - lookingWeight - sittingWeight);
-  transition.time = (1 - progress) * transition.getClip().duration;
-  // Idle loops run only at the ends. Stopping anywhere in between holds the pose.
-  looking.paused = progress > 0;
-  sitting.paused = progress < 1;
+  const state = modelAnimation;
+  if (loadingScreen.hidden) {
+    const scroll = window.scrollY / Math.max(host.clientHeight, 1);
+    // Separate entry/exit thresholds prevent tiny scroll movements retriggering it.
+    if (scroll > 0.18) state.wantsSitting = true;
+    else if (scroll < 0.06) state.wantsSitting = false;
+    const direction = state.wantsSitting ? -1 : 1;
+    if (state.moving) {
+      if (direction !== state.direction) {
+        // Reverse from the current pose when the user changes scroll direction.
+        state.direction = direction;
+        state.transition.setEffectiveTimeScale(direction);
+      }
+    } else if (state.wantsSitting !== (state.pose === 'sitting')) {
+      state.moving = true;
+      state.direction = direction;
+      state.completedDirection = null;
+      state.transition.reset().setEffectiveWeight(1).setEffectiveTimeScale(direction);
+      state.transition.time = direction < 0 ? state.transition.getClip().duration : 0;
+      state.transition.play();
+      state.currentIdle.crossFadeTo(state.transition, 0.35, false);
+    }
+  }
   modelMixer.update(delta);
+  if (state.completedDirection !== null) {
+    const seated = state.completedDirection < 0;
+    const idle = seated ? state.sitting : state.looking;
+    idle.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).play();
+    state.transition.crossFadeTo(idle, 0.35, false);
+    state.currentIdle = idle;
+    state.pose = seated ? 'sitting' : 'standing';
+    state.moving = false;
+    state.completedDirection = null;
+  }
 }
 
 new FBXLoader().load(
-  './assets/Standing Up Combined.fbx',
+  './assets/Standing Up Combined.fbx?v=20261011-rebuild',
   (fbx) => {
     let meshCount = 0;
     fbx.traverse((child) => {
