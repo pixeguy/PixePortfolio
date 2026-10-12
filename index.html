@@ -24,16 +24,27 @@
       <div id="name-backdrop" aria-hidden="true"><span class="name-word">Zhan</span><span class="name-word">Feng</span></div>
       <div id="canvas-host"></div>
       <section id="portfolio" aria-label="Portfolio">
+        <div class="portfolio-navigation">
         <div class="portfolio-tabs" role="tablist" aria-label="Portfolio sections">
           <button id="projects-tab" class="portfolio-tab" type="button" role="tab" aria-selected="true" aria-controls="projects-panel">Projects</button>
           <span class="tab-divider" aria-hidden="true"></span>
-          <button id="devlog-tab" class="portfolio-tab" type="button" role="tab" aria-selected="false" aria-controls="devlog-panel" tabindex="-1">Devlog</button>
+          <button id="devlog-tab" class="portfolio-tab" type="button" role="tab" aria-selected="false" aria-controls="devlog-panel" tabindex="-1">Devlogs</button>
+          <button id="achievements-tab" class="portfolio-tab portfolio-tab--second-row" type="button" role="tab" aria-selected="false" aria-controls="achievements-panel" tabindex="-1">Achievements</button>
         </div>
         <div class="portfolio-divider" aria-hidden="true"></div>
+        </div>
         <section id="projects-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="projects-tab" tabindex="0"><div id="project-list" class="project-list"></div></section>
         <section id="devlog-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="devlog-tab" tabindex="0" hidden></section>
+        <section id="achievements-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="achievements-tab" tabindex="0" hidden></section>
       </section>
       <section id="loading-screen" role="status" aria-label="Loading 3D model">
+        <svg class="loading-wave-definitions" width="0" height="0" aria-hidden="true">
+          <defs>
+            <clipPath id="loading-wave-clip" clipPathUnits="objectBoundingBox">
+              <path id="loading-wave-path" d="M 0 0 H 1 V 1 H 0 Z" />
+            </clipPath>
+          </defs>
+        </svg>
         <div class="loader-monogram" aria-hidden="true">
           <span class="loader-letter">
             <span class="loader-letter-base">Z</span>

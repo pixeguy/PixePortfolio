@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { createEdgeEffect } from './edge-effect.js';
 
 // Render into the model's own content slot rather than a viewport overlay.
 export function createProjectModels() {
@@ -37,10 +38,9 @@ export function createProjectModels() {
       preview.renderer.domElement.className = 'project-model-preview';
       preview.renderer.domElement.setAttribute('aria-hidden', 'true');
       preview.host.append(preview.renderer.domElement);
-      preview.material = new THREE.MeshBasicMaterial({ color: '#d4c444', wireframe: true, side: THREE.DoubleSide });
+      preview.edges = createEdgeEffect(preview.renderer);
       object.traverse(child => {
         if (child.isMesh) {
-          child.material = preview.material;
           child.frustumCulled = false;
         } else if (child.isLine || child.isPoints) child.visible = false;
       });
@@ -132,7 +132,7 @@ export function createProjectModels() {
         preview.motion.rotation.y = THREE.MathUtils.lerp(preview.motion.rotation.y, horizontalPointer * .16, smoothing);
         preview.motion.position.x = THREE.MathUtils.lerp(preview.motion.position.x, horizontalPointer * .09, smoothing);
         preview.motion.position.y = THREE.MathUtils.lerp(preview.motion.position.y, -pointer.y * .06, smoothing);
-        preview.renderer.render(preview.scene, preview.camera);
+        preview.edges.render(preview.scene, preview.camera);
       }
     },
     destroy() {
@@ -143,8 +143,13 @@ export function createProjectModels() {
       visibility.disconnect();
       previews.forEach(preview => {
         preview.mixer?.stopAllAction();
-        preview.scene.traverse(child => { if (child.isMesh) child.geometry.dispose(); });
-        preview.material?.dispose();
+        preview.scene.traverse(child => {
+          if (!child.isMesh) return;
+          child.geometry.dispose();
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(material => material.dispose());
+        });
+        preview.edges?.destroy();
         if (preview.renderer) {
           preview.renderer.dispose();
           preview.renderer.forceContextLoss();

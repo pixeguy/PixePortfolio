@@ -1,0 +1,107 @@
+import * as THREE from 'three';
+
+// Shared post-process settings for the person, cat, and mask.
+export const EDGE_SETTINGS = {
+  threshold: 0.5,
+  thickness: 1, // CSS pixels; independent of display pixel density.
+  color: '#d4c444',
+};
+
+export function createEdgeEffect(renderer) {
+  const normals = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  const target = new THREE.WebGLRenderTarget(1, 1, {
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    depthBuffer: true,
+    stencilBuffer: false,
+  });
+  target.texture.colorSpace = THREE.NoColorSpace;
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    uniforms: {
+      normalTexture: { value: target.texture },
+      pixelOffset: { value: new THREE.Vector2() },
+      edgeThreshold: { value: EDGE_SETTINGS.threshold },
+      outlineColor: { value: new THREE.Color(EDGE_SETTINGS.color) },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D normalTexture;
+      uniform vec2 pixelOffset;
+      uniform float edgeThreshold;
+      uniform vec3 outlineColor;
+      varying vec2 vUv;
+      vec3 decodeNormal(vec4 sampleValue) {
+        return (sampleValue.rgb * 2.0 - 1.0) * step(0.5, sampleValue.a);
+      }
+      void main() {
+        vec4 right = texture2D(normalTexture, vUv + vec2(pixelOffset.x, 0.0));
+        vec4 left = texture2D(normalTexture, vUv - vec2(pixelOffset.x, 0.0));
+        vec4 up = texture2D(normalTexture, vUv + vec2(0.0, pixelOffset.y));
+        vec4 down = texture2D(normalTexture, vUv - vec2(0.0, pixelOffset.y));
+        // Unity's opposite-neighbour normal comparison.
+        float difference = length(decodeNormal(right) - decodeNormal(left))
+          + length(decodeNormal(up) - decodeNormal(down));
+        float normalEdge = step(edgeThreshold, difference);
+        // Alpha also catches silhouettes against the transparent background.
+        float silhouette = max(abs(right.a - left.a), abs(up.a - down.a));
+        float outline = max(normalEdge, silhouette);
+        gl_FragColor = vec4(outlineColor, outline);
+        #include <colorspace_fragment>
+      }
+    `,
+  });
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  const screen = new THREE.Scene();
+  screen.add(new THREE.Mesh(geometry, material));
+  const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const bufferSize = new THREE.Vector2();
+  const previousColor = new THREE.Color();
+
+  return {
+    render(scene, camera) {
+      renderer.getDrawingBufferSize(bufferSize);
+      if (target.width !== bufferSize.x || target.height !== bufferSize.y) {
+        target.setSize(bufferSize.x, bufferSize.y);
+      }
+      const offset = EDGE_SETTINGS.thickness * renderer.getPixelRatio();
+      material.uniforms.pixelOffset.value.set(offset / bufferSize.x, offset / bufferSize.y);
+      material.uniforms.edgeThreshold.value = EDGE_SETTINGS.threshold;
+      material.uniforms.outlineColor.value.set(EDGE_SETTINGS.color);
+      const previousTarget = renderer.getRenderTarget();
+      const previousMaterial = scene.overrideMaterial;
+      const previousAlpha = renderer.getClearAlpha();
+      renderer.getClearColor(previousColor);
+      try {
+        scene.overrideMaterial = normals;
+        renderer.setClearColor(0x000000, 0);
+        renderer.setRenderTarget(target);
+        renderer.clear();
+        renderer.render(scene, camera);
+        scene.overrideMaterial = previousMaterial;
+        renderer.setRenderTarget(previousTarget);
+        renderer.clear();
+        renderer.render(screen, screenCamera);
+      } finally {
+        scene.overrideMaterial = previousMaterial;
+        renderer.setRenderTarget(previousTarget);
+        renderer.setClearColor(previousColor, previousAlpha);
+      }
+    },
+    destroy() {
+      target.dispose();
+      normals.dispose();
+      material.dispose();
+      geometry.dispose();
+    },
+  };
+}

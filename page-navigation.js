@@ -1,5 +1,6 @@
 import { createProjectModels } from './project-models.js';
 import { createBannerMasks } from './blob-mask.js';
+import { createProjectPager } from './project-pager.js';
 
 // Change page content without replacing the canvases or their animation state.
 export function createProjectNavigation(reducedMotion) {
@@ -61,6 +62,7 @@ export function createProjectNavigation(reducedMotion) {
           history.back();
         });
         document.querySelector('#viewer').append(projectContent);
+        createProjectPager(projectContent, url, nextURL => navigate(nextURL, true));
         bannerMasks = createBannerMasks(projectContent);
         projectModels = createProjectModels();
         projectContent.querySelectorAll('[data-project-model]').forEach(host => {

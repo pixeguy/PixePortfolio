@@ -1,12 +1,14 @@
 import { createProjectModels } from './project-models.js';
 import { createBannerMasks } from './blob-mask.js';
 import { createSpaceBackground } from './space-background.js';
+import { createProjectPager } from './project-pager.js';
 
 const host = document.querySelector('#viewer');
 const background = createSpaceBackground(host, document.querySelector('#nebula'), document.querySelector('#starfield'));
 new ResizeObserver(() => background.resize()).observe(host);
 background.resize();
 const projectContent = document.querySelector('[data-project-content]');
+createProjectPager(projectContent, location.href);
 const bannerMasks = createBannerMasks(projectContent);
 const projectModels = createProjectModels();
 projectContent.querySelectorAll('[data-project-model]').forEach(host => {

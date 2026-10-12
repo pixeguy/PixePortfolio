@@ -3,6 +3,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { projects } from './projects.js';
 import { createProjectNavigation } from './page-navigation.js';
 import { createSpaceBackground, nebulaNoise, NEBULA_MOTION } from './space-background.js';
+import { createEdgeEffect } from './edge-effect.js';
 
 const host = document.querySelector('#canvas-host');
 const loadingScreen = document.querySelector('#loading-screen');
@@ -239,57 +240,11 @@ const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 5000);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
 host.appendChild(renderer.domElement);
-
-// Patch a built-in material so Three.js keeps its normal morph and skeleton handling.
-const wireMaterial = new THREE.MeshBasicMaterial({
-  color: '#ffffff',
-  side: THREE.DoubleSide,
-  transparent: true,
-  depthWrite: false,
-});
-wireMaterial.onBeforeCompile = (shader) => {
-  shader.vertexShader = shader.vertexShader
-    .replace(
-      '#include <common>',
-      '#include <common>\nattribute vec3 barycentric;\nvarying vec3 vBarycentric;',
-    )
-    .replace(
-      '#include <begin_vertex>',
-      '#include <begin_vertex>\nvBarycentric = barycentric;',
-    );
-
-  shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying vec3 vBarycentric;')
-    .replace(
-      '#include <color_fragment>',
-      `#include <color_fragment>
-      vec3 edgeDistance = smoothstep(vec3(0.0), fwidth(vBarycentric) * 1.25, vBarycentric);
-      float wireAmount = 1.0 - min(min(edgeDistance.x, edgeDistance.y), edgeDistance.z);
-      diffuseColor.rgb = vec3(0.83137, 0.76863, 0.26667);
-      diffuseColor.a *= wireAmount;`,
-    );
-};
-wireMaterial.customProgramCacheKey = () => 'fbx-triangle-wireframe-v2';
-
-function prepareWireGeometry(source) {
-  // Non-indexed triangles give each face its own barycentric coordinates while
-  // preserving skinIndex, skinWeight, morph targets, UVs, and other attributes.
-  const geometry = source.index ? source.toNonIndexed() : source.clone();
-  const count = geometry.attributes.position.count;
-  const barycentric = new Float32Array(count * 3);
-  const corners = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  for (let i = 0; i < count; i += 3) {
-    for (let corner = 0; corner < 3; corner += 1) {
-      barycentric.set(corners[corner], (i + corner) * 3);
-    }
-  }
-  geometry.setAttribute('barycentric', new THREE.BufferAttribute(barycentric, 3));
-  return geometry;
-}
+const modelEdges = createEdgeEffect(renderer);
 
 function fitModel(object) {
   object.updateMatrixWorld(true);
@@ -347,11 +302,32 @@ function dismissLoadingScreen() {
   const remaining = Math.max(0, minimumLoadingDuration - elapsed);
   window.setTimeout(() => {
     loadingScreen.classList.add('is-leaving');
-    window.setTimeout(() => {
+    const finish = () => {
       loadingScreen.hidden = true;
       document.documentElement.classList.remove('is-loading');
       startTitleTypewriter();
-    }, 720);
+    };
+    if (reducedMotion.matches) { finish(); return; }
+    const wave = document.querySelector('#loading-wave-path');
+    const startedAt = performance.now();
+    const duration = 1200;
+    function animateWave(time) {
+      const progress = Math.min((time - startedAt) / duration, 1);
+      const eased = progress * progress * (3 - 2 * progress);
+      const level = -.08 + eased * 1.16;
+      const amplitude = .065 * Math.sin(progress * Math.PI);
+      const points = [];
+      for (let i = 24; i >= 0; i -= 1) {
+        const x = i / 24;
+        const y = level + Math.sin(x * Math.PI * 3 + progress * Math.PI * 4) * amplitude
+          + Math.sin(x * Math.PI * 5 - progress * Math.PI * 3) * amplitude * .3;
+        points.push(`${x.toFixed(4)} ${y.toFixed(4)}`);
+      }
+      wave.setAttribute('d', `M 0 1 L 1 1 L ${points.join(' L ')} Z`);
+      if (progress < 1) requestAnimationFrame(animateWave);
+      else finish();
+    }
+    requestAnimationFrame(animateWave);
   }, remaining);
 }
 
@@ -457,8 +433,6 @@ new FBXLoader().load(
     let meshCount = 0;
     fbx.traverse((child) => {
       if (!child.isMesh || !child.geometry?.attributes?.position) return;
-      child.geometry = prepareWireGeometry(child.geometry);
-      child.material = wireMaterial;
       child.castShadow = false;
       child.receiveShadow = false;
       if (child.isSkinnedMesh) child.frustumCulled = false;
@@ -540,5 +514,5 @@ renderer.setAnimationLoop(() => {
   spaceBackground.draw(time);
   projectNavigation.update(time);
   animateProjectOutlines(time);
-  if (!document.body.classList.contains('is-project-view')) renderer.render(scene, camera);
+  if (!document.body.classList.contains('is-project-view')) modelEdges.render(scene, camera);
 });
