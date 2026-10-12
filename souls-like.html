@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#030306" />
+    <title>Souls Like - Zhan Feng</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      } }
+    </script>
+    <script type="module" src="./project-page.js"></script>
+  </head>
+  <body class="project-page">
+    <main id="viewer" aria-label="Souls Like">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <section class="project-page-content" data-project-content aria-label="Souls Like project page">
+        <a class="project-back" data-back href="./index.html"><span aria-hidden="true">&#8592;</span> Back</a>
+        <header class="project-banner">
+          <svg class="project-banner-mask" viewBox="0 0 1000 650" preserveAspectRatio="none" role="img" aria-labelledby="souls-like-banner-title">
+            <title id="souls-like-banner-title">Souls Like project screenshot</title>
+            <defs>
+              <clipPath id="souls-like-banner-clip" clipPathUnits="userSpaceOnUse">
+                <path id="souls-like-banner-shape" data-blob-mask d="M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z" />
+              </clipPath>
+            </defs>
+            <image href="./assets/SoulsLike.png" width="1000" height="650" preserveAspectRatio="none" clip-path="url(#souls-like-banner-clip)" />
+            <use href="#souls-like-banner-shape" fill="none" stroke="var(--accent-color)" stroke-width="2" vector-effect="non-scaling-stroke" />
+          </svg>
+        </header>
+        <header class="project-heading">
+          <h1>Souls Like</h1>
+          <div class="portfolio-divider" aria-hidden="true"></div>
+        </header>
+        <section class="project-body" aria-label="Souls Like project content">
+          <div class="project-model-host" data-project-model="./assets/soulsBoss-web.fbx" data-mirror="true" data-animation="idle" data-animation-speed="1" role="img" aria-label="Souls Like boss idle model"></div>
+          <div class="project-details">
+            <div class="project-copy">
+              <p>Project overview coming soon. This section will introduce Souls Like and its core gameplay.</p>
+              <p>More details about the development process, my contributions, and what I learned will go here. The image below is a preview of the project.</p>
+            </div>
+            <img class="project-detail-image" src="./assets/SoulsLike.png" alt="Souls Like project screenshot" loading="lazy"  />
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

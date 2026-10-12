@@ -4,7 +4,7 @@ import { createProjectPager } from './project-pager.js';
 
 // Change page content without replacing the canvases or their animation state.
 export function createProjectNavigation(reducedMotion) {
-  const homeElements = ['canvas-host', 'name-backdrop', 'portfolio'].map(id => document.getElementById(id));
+  const homeElements = ['canvas-host', 'name-backdrop', 'portfolio', 'purple-section'].map(id => document.getElementById(id));
   const homeTitle = document.title;
   const homeURL = location.href;
   let projectContent = null;
@@ -59,7 +59,8 @@ export function createProjectNavigation(reducedMotion) {
         projectContent.querySelector('[data-back]').addEventListener('click', event => {
           if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
           event.preventDefault();
-          history.back();
+          history.pushState({ portfolioView: 'home' }, '', homeURL);
+          navigate(null, false);
         });
         document.querySelector('#viewer').append(projectContent);
         createProjectPager(projectContent, url, nextURL => navigate(nextURL, true));

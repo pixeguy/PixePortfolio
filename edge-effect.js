@@ -26,6 +26,11 @@ export function createEdgeEffect(renderer) {
       pixelOffset: { value: new THREE.Vector2() },
       edgeThreshold: { value: EDGE_SETTINGS.threshold },
       outlineColor: { value: new THREE.Color(EDGE_SETTINGS.color) },
+      boundaryEnabled: { value: 0 },
+      boundaryTop: { value: 0 },
+      boundaryBottom: { value: 1 },
+      boundaryCurve: { value: 0 },
+      boundaryColor: { value: new THREE.Color('#d4c444') },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -39,6 +44,11 @@ export function createEdgeEffect(renderer) {
       uniform vec2 pixelOffset;
       uniform float edgeThreshold;
       uniform vec3 outlineColor;
+      uniform float boundaryEnabled;
+      uniform float boundaryTop;
+      uniform float boundaryBottom;
+      uniform float boundaryCurve;
+      uniform vec3 boundaryColor;
       varying vec2 vUv;
       vec3 decodeNormal(vec4 sampleValue) {
         return (sampleValue.rgb * 2.0 - 1.0) * step(0.5, sampleValue.a);
@@ -55,7 +65,13 @@ export function createEdgeEffect(renderer) {
         // Alpha also catches silhouettes against the transparent background.
         float silhouette = max(abs(right.a - left.a), abs(up.a - down.a));
         float outline = max(normalEdge, silhouette);
-        gl_FragColor = vec4(outlineColor, outline);
+        // Match the section's elliptical CSS corners at both its entrance and exit.
+        float horizontal = vUv.x * 2.0 - 1.0;
+        float curve = boundaryCurve * (1.0 - sqrt(max(0.0, 1.0 - horizontal * horizontal)));
+        float screenY = 1.0 - vUv.y;
+        float insideSection = boundaryEnabled * step(boundaryTop + curve, screenY)
+          * step(screenY, boundaryBottom - curve);
+        gl_FragColor = vec4(mix(outlineColor, boundaryColor, insideSection), outline);
         #include <colorspace_fragment>
       }
     `,
@@ -68,6 +84,12 @@ export function createEdgeEffect(renderer) {
   const previousColor = new THREE.Color();
 
   return {
+    setColorBoundary(top, bottom, curve) {
+      material.uniforms.boundaryEnabled.value = top < 1 && bottom > 0 ? 1 : 0;
+      material.uniforms.boundaryTop.value = top;
+      material.uniforms.boundaryBottom.value = bottom;
+      material.uniforms.boundaryCurve.value = curve;
+    },
     render(scene, camera) {
       renderer.getDrawingBufferSize(bufferSize);
       if (target.width !== bufferSize.x || target.height !== bufferSize.y) {

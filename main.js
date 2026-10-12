@@ -4,8 +4,19 @@ import { projects } from './projects.js';
 import { createProjectNavigation } from './page-navigation.js';
 import { createSpaceBackground, nebulaNoise, NEBULA_MOTION } from './space-background.js';
 import { createEdgeEffect } from './edge-effect.js';
+import { updateScrollPalette } from './scroll-palette.js';
+import { createCursorBlob } from './cursor-blob.js';
+import { createPurpleSequence } from './purple-sequence.js';
 
 const host = document.querySelector('#canvas-host');
+// In viewport heights: raise duration to require more scrolling to finish sitting.
+const HERO_SCROLL = { start: 0.08, duration: 2.2 };
+// Screen heights of scrolling for the model's move and turn in the purple section.
+const SECTION_SCROLL = { duration: 1, turnDegrees: 65, startBeforeTop: 0.7, exitDuration: 1 };
+const purpleSection = document.querySelector('#purple-section');
+purpleSection.style.minHeight = `${(SECTION_SCROLL.duration + 1) * 100}svh`;
+document.querySelector('#nebula-return').style.minHeight = `${(SECTION_SCROLL.exitDuration + .2) * 100}svh`;
+document.documentElement.style.setProperty('--project-start', `${(HERO_SCROLL.start + HERO_SCROLL.duration + .1) * 100}svh`);
 const loadingScreen = document.querySelector('#loading-screen');
 const loadingProgress = document.querySelectorAll('.loader-monogram-fill');
 const loadingStartedAt = performance.now();
@@ -17,9 +28,17 @@ let modelMotion = null;
 let modelPlacement = null;
 let modelMixer = null;
 let modelAnimation = null;
+let purpleSequence = null;
+let sittingProgress = 0;
+let titleSequence = [];
+let titleTypedCount = 0;
+let titleVisibleCount = -1;
+let titleCaret = null;
+const portfolioSection = document.querySelector('#portfolio');
 const modelLiftAxis = new THREE.Vector3();
 const pointer = { x: 0, y: 0 };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const cursorBlob = createCursorBlob();
 let scrollTarget = window.scrollY;
 let scrollAnimating = false;
 let lastFrameTime = performance.now();
@@ -199,10 +218,52 @@ function createProjectEntry(project) {
   }
   return entry;
 }
-projectList.replaceChildren(...projects.map(createProjectEntry));
+const projectsPerPage = 3;
+const projectPageCount = Math.ceil(projects.length / projectsPerPage);
+let currentProjectPage = 0;
+const projectPagination = document.createElement('nav');
+projectPagination.className = 'project-pagination';
+projectPagination.setAttribute('aria-label', 'Project list pages');
+const paginationFooter = document.createElement('div');
+paginationFooter.className = 'project-pagination-footer';
+paginationFooter.append(projectPagination);
+document.querySelector('#projects-panel').after(paginationFooter);
+
+function renderProjectPage(page, scrollToTabs = false) {
+  currentProjectPage = THREE.MathUtils.clamp(page, 0, Math.max(0, projectPageCount - 1));
+  outlineVisibility.disconnect();
+  projectOutlines.length = 0;
+  const first = currentProjectPage * projectsPerPage;
+  projectList.replaceChildren(...projects.slice(first, first + projectsPerPage).map(createProjectEntry));
+  projectPagination.replaceChildren();
+  paginationFooter.hidden = projectPageCount <= 1;
+  function addButton(label, destination, disabled = false, current = false) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.disabled = disabled;
+    if (current) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => {
+      renderProjectPage(destination, true);
+      projectPagination.querySelector('[aria-current="page"]')?.focus({ preventScroll: true });
+    });
+    projectPagination.append(button);
+  }
+  addButton('← Previous', currentProjectPage - 1, currentProjectPage === 0);
+  for (let i = 0; i < projectPageCount; i += 1) {
+    addButton(String(i + 1), i, false, i === currentProjectPage);
+  }
+  addButton('Next →', currentProjectPage + 1, currentProjectPage === projectPageCount - 1);
+  if (scrollToTabs) {
+    stopScrollEasing();
+    document.querySelector('.portfolio-navigation').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'start' });
+  }
+}
+renderProjectPage(0);
 
 const portfolioTabs = [...document.querySelectorAll('.portfolio-tab')];
 function selectPortfolioTab(selected) {
+  paginationFooter.hidden = selected.id !== 'projects-tab' || projectPageCount <= 1;
   portfolioTabs.forEach(tab => {
     const active = tab === selected;
     tab.setAttribute('aria-selected', String(active));
@@ -353,6 +414,8 @@ function startTitleTypewriter() {
   caret.className = 'typing-caret';
   caret.textContent = '|';
   sequence[0]?.word.prepend(caret);
+  titleSequence = sequence;
+  titleCaret = caret;
   document.querySelector('#name-backdrop').classList.add('is-typing');
 
   let index = 0;
@@ -360,12 +423,9 @@ function startTitleTypewriter() {
     const next = sequence[index];
     if (!next) return;
 
-    if (index > 0 && next.word !== sequence[index - 1].word) {
-      next.word.prepend(caret);
-    }
-    next.letter.classList.add('is-typed');
-    next.letter.after(caret);
     index += 1;
+    titleTypedCount = index;
+    updateTitleBackspace();
 
     if (index < sequence.length) {
       const changingWord = sequence[index].word !== next.word;
@@ -373,6 +433,17 @@ function startTitleTypewriter() {
     }
   };
   typeNextCharacter();
+}
+
+function updateTitleBackspace() {
+  if (!titleSequence.length) return;
+  titleCaret.hidden = sittingProgress >= 1;
+  const count = Math.min(titleTypedCount, Math.floor(titleSequence.length * (1 - sittingProgress)));
+  if (count === titleVisibleCount) return;
+  titleVisibleCount = count;
+  titleSequence.forEach(({ letter }, index) => letter.classList.toggle('is-typed', index < count));
+  if (count) titleSequence[count - 1].letter.after(titleCaret);
+  else titleSequence[0].word.prepend(titleCaret);
 }
 
 function setLoadingProgress(progress) {
@@ -383,12 +454,12 @@ function setLoadingProgress(progress) {
 }
 
 function initializeModelAnimation(fbx) {
-  const findClip = name => fbx.animations.find(clip => clip.name.toLowerCase().includes(name));
-  const looking = findClip('looking around');
-  const standing = findClip('standing up');
-  const sitting = findClip('sitting idle');
+  const findClip = name => fbx.animations.find(clip => clip.name.split('|').pop().toLowerCase() === name);
+  const looking = findClip('standing');
+  const standing = findClip('floor to stand');
+  const sitting = findClip('floor');
   if (!looking || !standing || !sitting) {
-    showError('The combined FBX needs Looking Around, Standing Up, and Sitting Idle animations.');
+    showError('The combined FBX needs Standing, Floor To Stand, and Floor animations.');
     return false;
   }
   modelMixer = new THREE.AnimationMixer(fbx);
@@ -402,6 +473,7 @@ function initializeModelAnimation(fbx) {
   transition.paused = true;
   transition.time = standing.duration;
   modelAnimation = { looking: lookingAction, sitting: sittingAction, transition };
+  purpleSequence = createPurpleSequence(fbx, modelMixer, purpleSection);
   modelMixer.update(0);
   return true;
 }
@@ -410,16 +482,22 @@ function updateModelAnimation(delta) {
   if (!modelAnimation) return;
   const { looking, sitting, transition } = modelAnimation;
   const viewportHeight = Math.max(host.clientHeight, 1);
-  // Start below the banner and scrub the pose across 1.5 screens.
-  const start = viewportHeight * 0.08;
-  const distance = viewportHeight * 1.5;
+  // Finish sitting before the project tabs arrive at the top of the viewport.
+  const start = viewportHeight * HERO_SCROLL.start;
+  const distance = viewportHeight * HERO_SCROLL.duration;
   const progress = loadingScreen.hidden
     ? THREE.MathUtils.clamp((window.scrollY - start) / distance, 0, 1) : 0;
+  sittingProgress = progress;
+  portfolioSection.classList.toggle('is-ready', progress >= 1);
+  portfolioSection.inert = progress < 1 || document.body.classList.contains('is-project-view');
+  updateTitleBackspace();
+  if (purpleSequence?.active) return;
   const lookingWeight = 1 - THREE.MathUtils.smoothstep(progress, 0, 0.08);
   const sittingWeight = THREE.MathUtils.smoothstep(progress, 0.92, 1);
   looking.setEffectiveWeight(lookingWeight);
   sitting.setEffectiveWeight(sittingWeight);
   transition.setEffectiveWeight(1 - lookingWeight - sittingWeight);
+  transition.paused = true;
   transition.time = (1 - progress) * transition.getClip().duration;
   // Idle animations run at the ends; stopping between them holds the pose.
   looking.paused = progress > 0;
@@ -428,8 +506,14 @@ function updateModelAnimation(delta) {
 }
 
 new FBXLoader().load(
-  './assets/Standing Up Combined.fbx?v=20261011-rebuild',
+  './assets/Standing Up Combined.fbx?v=20261013-hips-fixed',
   (fbx) => {
+    // Render the character surface, excluding exported joint spheres and helpers.
+    const helpers = [];
+    fbx.traverse(child => {
+      if (child.isMesh && (child.name === 'Alpha_Joints' || child.name === 'Cube')) helpers.push(child);
+    });
+    for (const helper of helpers) helper.removeFromParent();
     let meshCount = 0;
     fbx.traverse((child) => {
       if (!child.isMesh || !child.geometry?.attributes?.position) return;
@@ -482,11 +566,24 @@ renderer.setAnimationLoop(() => {
     scrollTarget = THREE.MathUtils.clamp(scrollTarget, 0, maximum);
     const remaining = scrollTarget - window.scrollY;
     const next = Math.abs(remaining) < 0.75 ? scrollTarget
-      : window.scrollY + remaining * (1 - Math.exp(-10 * delta));
+      : window.scrollY + remaining * (1 - Math.exp(-6 * delta));
     window.scrollTo({ top: next, behavior: 'instant' });
     if (Math.abs(remaining) < 0.75) scrollAnimating = false;
   }
   updateModelAnimation(delta);
+  if (purpleSequence && !document.body.classList.contains('is-project-view')) {
+    purpleSequence.update(delta);
+  }
+  const viewportHeight = Math.max(host.clientHeight, 1);
+  const sectionBounds = purpleSection.getBoundingClientRect();
+  const sectionTop = sectionBounds.top;
+  const entranceProgress = THREE.MathUtils.smoothstep(
+    THREE.MathUtils.clamp((viewportHeight * SECTION_SCROLL.startBeforeTop - sectionTop) / (viewportHeight * SECTION_SCROLL.duration), 0, 1), 0, 1);
+  const exitProgress = THREE.MathUtils.smoothstep(
+    THREE.MathUtils.clamp((viewportHeight - sectionBounds.bottom) / (viewportHeight * SECTION_SCROLL.exitDuration), 0, 1), 0, 1);
+  const sectionProgress = entranceProgress * (1 - exitProgress);
+  // Colour is split exactly at the physical boundary, rather than fading the whole model.
+  modelEdges.setColorBoundary(sectionTop / viewportHeight, sectionBounds.bottom / viewportHeight, 64 / viewportHeight);
   if (modelPlacement) {
     const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
     const progress = THREE.MathUtils.smoothstep(window.scrollY / Math.max(host.clientHeight, 1), 0, 0.7);
@@ -494,16 +591,17 @@ renderer.setAnimationLoop(() => {
     const viewWidth = 2 * camera.position.length() * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect;
     const rightOffset = Math.max(originalOffset, viewWidth * 0.29);
     modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion)
-      .multiplyScalar(THREE.MathUtils.lerp(originalOffset, rightOffset, progress));
+      .multiplyScalar(THREE.MathUtils.lerp(
+        THREE.MathUtils.lerp(originalOffset, rightOffset, progress), -viewWidth * .25, sectionProgress));
     // Lift along screen-up as the sitting animation progresses, keeping feet in view.
-    const sittingProgress = THREE.MathUtils.clamp((window.scrollY / Math.max(host.clientHeight, 1) - 0.08) / 1.8, 0, 1);
-    const lift = (viewWidth / aspect) * 0.12 * THREE.MathUtils.smoothstep(sittingProgress, 0, 1);
+    const lift = (viewWidth / aspect) * 0.12 * THREE.MathUtils.smoothstep(sittingProgress, 0, 1)
+      * (purpleSequence?.active ? purpleSequence.liftFactor : 1);
     modelLiftAxis.set(0, 1, 0).applyQuaternion(camera.quaternion).multiplyScalar(lift);
     modelPlacement.position.add(modelLiftAxis);
   }
   if (modelMotion) {
     const targetRotationX = pointer.y * 0.1;
-    const targetRotationY = pointer.x * 0.16;
+    const targetRotationY = pointer.x * 0.16 + THREE.MathUtils.degToRad(SECTION_SCROLL.turnDegrees) * sectionProgress;
     const targetOffsetX = pointer.x * 0.09;
     const targetOffsetY = -pointer.y * 0.06;
     modelMotion.rotation.x += (targetRotationX - modelMotion.rotation.x) * 0.055;
@@ -511,7 +609,10 @@ renderer.setAnimationLoop(() => {
     modelMotion.position.x += (targetOffsetX - modelMotion.position.x) * 0.055;
     modelMotion.position.y += (targetOffsetY - modelMotion.position.y) * 0.055;
   }
-  spaceBackground.draw(time);
+  const paletteProgress = THREE.MathUtils.smoothstep(sittingProgress, 0, 1);
+  const backgroundProgress = updateScrollPalette(paletteProgress);
+  spaceBackground.draw(time, backgroundProgress);
+  cursorBlob.draw(time);
   projectNavigation.update(time);
   animateProjectOutlines(time);
   if (!document.body.classList.contains('is-project-view')) modelEdges.render(scene, camera);

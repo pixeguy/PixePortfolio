@@ -48,6 +48,7 @@ export function createProjectModels() {
         preview.mixer = new THREE.AnimationMixer(object);
         preview.mixer.timeScale = preview.animationSpeed;
         const clip = object.animations.find(clip => clip.name.toLowerCase().includes(preview.animation.toLowerCase())) || object.animations[0];
+        preview.clip = clip;
         preview.mixer.clipAction(clip).setLoop(THREE.LoopRepeat, Infinity).play();
         preview.mixer.update(0);
       }
@@ -56,14 +57,26 @@ export function createProjectModels() {
       // Measure actual deformed mesh vertices, excluding distant IK helpers.
       const bounds = new THREE.Box3();
       const vertex = new THREE.Vector3();
-      object.traverse(child => {
-        if (!child.isMesh || !child.geometry.attributes.position) return;
-        for (let i = 0; i < child.geometry.attributes.position.count; i += 1) {
-          child.getVertexPosition(i, vertex);
-          vertex.applyMatrix4(child.matrixWorld);
-          bounds.expandByPoint(vertex);
+      function measurePose() {
+        object.updateMatrixWorld(true);
+        object.traverse(child => { if (child.isSkinnedMesh) child.skeleton.update(); });
+        object.traverse(child => {
+          if (!child.isMesh || !child.geometry.attributes.position) return;
+          for (let i = 0; i < child.geometry.attributes.position.count; i += 1) {
+            child.getVertexPosition(i, vertex);
+            vertex.applyMatrix4(child.matrixWorld);
+            bounds.expandByPoint(vertex);
+          }
+        });
+      }
+      // Fit the complete animated range instead of just its opening pose.
+      if (preview.clip) {
+        for (let sample = 0; sample <= 32; sample += 1) {
+          preview.mixer.setTime(preview.clip.duration * sample / 32 / preview.animationSpeed);
+          measurePose();
         }
-      });
+        preview.mixer.setTime(0);
+      } else measurePose();
       if (bounds.isEmpty()) {
         console.error('Project FBX has no renderable mesh:', preview.url);
         return;
@@ -118,7 +131,7 @@ export function createProjectModels() {
           preview.camera.aspect = width / height;
           const vertical = THREE.MathUtils.degToRad(preview.camera.fov / 2);
           const horizontal = Math.atan(Math.tan(vertical) * preview.camera.aspect);
-          const distance = preview.radius / Math.sin(Math.min(vertical, horizontal)) * 1.15;
+          const distance = preview.radius / Math.sin(Math.min(vertical, horizontal)) * 1.25;
           preview.camera.position.set(.8, .35, 1).normalize().multiplyScalar(distance);
           preview.camera.far = Math.max(100, distance * 10);
           preview.camera.lookAt(0, 0, 0);
