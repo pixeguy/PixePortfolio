@@ -4,19 +4,70 @@ import { projects } from './projects.js';
 import { createProjectNavigation } from './page-navigation.js';
 import { createSpaceBackground, nebulaNoise, NEBULA_MOTION } from './space-background.js';
 import { createEdgeEffect } from './edge-effect.js';
-import { updateScrollPalette } from './scroll-palette.js';
+import { updateScrollPalette, getForegroundPaletteProgress } from './scroll-palette.js';
 import { createCursorBlob } from './cursor-blob.js';
 import { createPurpleSequence } from './purple-sequence.js';
+import { createFightingSequence } from './fighting-sequence.js';
+import { createOneTimeText } from './one-time-text.js';
+import { createJourneyTimeline } from './journey-timeline.js';
 
 const host = document.querySelector('#canvas-host');
+// Match the existing narrow CSS layout; wider viewports retain desktop behavior.
+const mobileLayout = window.matchMedia('(max-width: 700px)');
 // In viewport heights: raise duration to require more scrolling to finish sitting.
-const HERO_SCROLL = { start: 0.08, duration: 2.2 };
+const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 2.4, exitDuration: 1.2 };
+const fightExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration;
+const HERO_SCROLL = { start: fightExitStart + FIGHT_SCROLL.exitDuration, duration: 2.2 };
+function getHeroPaletteProgress(scroll) {
+  return THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(
+    (scroll - fightExitStart) / (FIGHT_SCROLL.exitDuration + HERO_SCROLL.duration), 0, 1), 0, 1);
+}
+document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 100}svh`;
+document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
+const fightingContent = document.querySelector('#fighting-content');
+const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
+fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + .32) * 100}svh`;
+const fightingText = [...fightingContent.querySelectorAll('.fighting-intro h2, .fighting-intro p')].map(element => {
+  const text = element.textContent;
+  element.setAttribute('aria-label', text);
+  const wrapper = document.createElement('span');
+  wrapper.setAttribute('aria-hidden', 'true');
+  const letters = [...text].map(character => {
+    const letter = document.createElement('span');
+    letter.textContent = character;
+    letter.style.opacity = '0';
+    wrapper.append(letter);
+    return letter;
+  });
+  element.replaceChildren(wrapper);
+  return letters;
+}).flat();
+let fightingTextCount = -1;
+function updateFightingText(scroll) {
+  const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
+  const typed = THREE.MathUtils.clamp((scroll - idleStart) / .35, 0, 1);
+  // Hold for another 40% of a viewport after the typing has completed.
+  const heldScroll = THREE.MathUtils.clamp(scroll - idleStart, 0, .75);
+  fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + heldScroll + .36) * 100}svh`;
+  const count = Math.floor(fightingText.length * typed);
+  fightingContent.hidden = !loadingScreen.hidden || scroll < idleStart || scroll >= HERO_SCROLL.start;
+  journeyTimeline.update(scroll, idleStart, getForegroundPaletteProgress(getHeroPaletteProgress(scroll)), loadingScreen.hidden);
+  if (count === fightingTextCount) return;
+  fightingTextCount = count;
+  fightingText.forEach((letter, index) => {
+    letter.style.opacity = index < count ? '1' : '0';
+    letter.classList.toggle('fight-text-caret', count > 0 && count < fightingText.length && index === count - 1);
+  });
+}
+const oneTimeText = createOneTimeText();
+for (const id of ['fighting-section', 'portfolio', 'purple-section']) oneTimeText.register(document.getElementById(id));
 // Screen heights of scrolling for the model's move and turn in the purple section.
 const SECTION_SCROLL = { duration: 1, turnDegrees: 65, startBeforeTop: 0.7, exitDuration: 1 };
 const purpleSection = document.querySelector('#purple-section');
 purpleSection.style.minHeight = `${(SECTION_SCROLL.duration + 1) * 100}svh`;
 document.querySelector('#nebula-return').style.minHeight = `${(SECTION_SCROLL.exitDuration + .2) * 100}svh`;
-document.documentElement.style.setProperty('--project-start', `${(HERO_SCROLL.start + HERO_SCROLL.duration + .1) * 100}svh`);
+// Reveal the tabs halfway down the screen after the model finishes sitting.
+document.documentElement.style.setProperty('--project-start', `${(HERO_SCROLL.start + HERO_SCROLL.duration + .5) * 100}svh`);
 const loadingScreen = document.querySelector('#loading-screen');
 const loadingProgress = document.querySelectorAll('.loader-monogram-fill');
 const loadingStartedAt = performance.now();
@@ -29,6 +80,8 @@ let modelPlacement = null;
 let modelMixer = null;
 let modelAnimation = null;
 let purpleSequence = null;
+let fightingSequence = null;
+let titleEraseProgress = 0;
 let sittingProgress = 0;
 let titleSequence = [];
 let titleTypedCount = 0;
@@ -46,7 +99,7 @@ let lastFrameTime = performance.now();
 // Native document scrolling retains the scrollbar, keyboard, and touch behavior.
 // Wheel input eases toward its destination in the existing animation loop.
 window.addEventListener('wheel', (event) => {
-  if (event.ctrlKey || reducedMotion.matches || document.documentElement.classList.contains('project-view-open') || !loadingScreen.hidden
+  if (event.ctrlKey || reducedMotion.matches || document.documentElement.classList.contains('project-view-open') || document.documentElement.classList.contains('is-navigating') || !loadingScreen.hidden
       || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
   const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
   const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -254,6 +307,8 @@ function renderProjectPage(page, scrollToTabs = false) {
     addButton(String(i + 1), i, false, i === currentProjectPage);
   }
   addButton('Next →', currentProjectPage + 1, currentProjectPage === projectPageCount - 1);
+  oneTimeText.register(projectList);
+  oneTimeText.register(projectPagination);
   if (scrollToTabs) {
     stopScrollEasing();
     document.querySelector('.portfolio-navigation').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'start' });
@@ -348,7 +403,11 @@ function fitModel(object) {
 function updateModelLayout() {
   if (!modelPlacement) return;
   const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
-  const offset = THREE.MathUtils.clamp((aspect - 0.45) * 1.15, 0.12, 1.5);
+  let offset = THREE.MathUtils.clamp((aspect - 0.45) * 1.15, 0.12, 1.5);
+  if (mobileLayout.matches) {
+    const viewWidth = 2 * camera.position.length() * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect;
+    offset = Math.max(offset, viewWidth * .29);
+  }
   // Shift along the camera's horizontal axis so moving right cannot lower the model.
   modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion).multiplyScalar(offset);
 }
@@ -437,8 +496,8 @@ function startTitleTypewriter() {
 
 function updateTitleBackspace() {
   if (!titleSequence.length) return;
-  titleCaret.hidden = sittingProgress >= 1;
-  const count = Math.min(titleTypedCount, Math.floor(titleSequence.length * (1 - sittingProgress)));
+  titleCaret.hidden = titleEraseProgress >= 1;
+  const count = Math.min(titleTypedCount, Math.floor(titleSequence.length * (1 - titleEraseProgress)));
   if (count === titleVisibleCount) return;
   titleVisibleCount = count;
   titleSequence.forEach(({ letter }, index) => letter.classList.toggle('is-typed', index < count));
@@ -473,6 +532,7 @@ function initializeModelAnimation(fbx) {
   transition.paused = true;
   transition.time = standing.duration;
   modelAnimation = { looking: lookingAction, sitting: sittingAction, transition };
+  fightingSequence = createFightingSequence(fbx, modelMixer, FIGHT_SCROLL);
   purpleSequence = createPurpleSequence(fbx, modelMixer, purpleSection);
   modelMixer.update(0);
   return true;
@@ -488,10 +548,15 @@ function updateModelAnimation(delta) {
   const progress = loadingScreen.hidden
     ? THREE.MathUtils.clamp((window.scrollY - start) / distance, 0, 1) : 0;
   sittingProgress = progress;
+  titleEraseProgress = loadingScreen.hidden
+    ? THREE.MathUtils.clamp((window.scrollY / viewportHeight - FIGHT_SCROLL.start) / FIGHT_SCROLL.enterDuration, 0, 1) : 0;
   portfolioSection.classList.toggle('is-ready', progress >= 1);
   portfolioSection.inert = progress < 1 || document.body.classList.contains('is-project-view');
   updateTitleBackspace();
+  const modelScroll = window.scrollY / viewportHeight;
+  updateFightingText(modelScroll);
   if (purpleSequence?.active) return;
+  if (fightingSequence.update(loadingScreen.hidden ? window.scrollY / viewportHeight : 0, delta)) return;
   const lookingWeight = 1 - THREE.MathUtils.smoothstep(progress, 0, 0.08);
   const sittingWeight = THREE.MathUtils.smoothstep(progress, 0.92, 1);
   looking.setEffectiveWeight(lookingWeight);
@@ -501,17 +566,27 @@ function updateModelAnimation(delta) {
   transition.time = (1 - progress) * transition.getClip().duration;
   // Idle animations run at the ends; stopping between them holds the pose.
   looking.paused = progress > 0;
+  looking.enabled = true;
+  looking.clampWhenFinished = false;
+  looking.setLoop(THREE.LoopRepeat, Infinity).play();
   sitting.paused = progress < 1;
+  if (progress >= 1) {
+    // Scrubbing the purple sequence changes shared actions to LoopOnce.
+    // Restore Floor's looping state when the hero controller owns it again.
+    sitting.enabled = true;
+    sitting.clampWhenFinished = false;
+    sitting.setLoop(THREE.LoopRepeat, Infinity).play();
+  }
   modelMixer.update(delta);
 }
 
 new FBXLoader().load(
-  './assets/Standing Up Combined.fbx?v=20261013-hips-fixed',
+  './assets/portfolio-character.fbx?v=20261013-jogging',
   (fbx) => {
-    // Render the character surface, excluding exported joint spheres and helpers.
+    // Joint spheres are part of the character; only exclude the stray helper cube.
     const helpers = [];
     fbx.traverse(child => {
-      if (child.isMesh && (child.name === 'Alpha_Joints' || child.name === 'Cube')) helpers.push(child);
+      if (child.isMesh && child.name === 'Cube') helpers.push(child);
     });
     for (const helper of helpers) helper.removeFromParent();
     let meshCount = 0;
@@ -540,7 +615,7 @@ new FBXLoader().load(
       setLoadingProgress(percent);
     }
   },
-  (error) => showError('Could not load the combined FBX. Start the site with Start Viewer.cmd and check assets/Standing Up Combined.fbx.', error),
+  (error) => showError('Could not load the character FBX. Start the site with Start Viewer.cmd and check assets/portfolio-character.fbx.', error),
 );
 
 function resize() {
@@ -584,6 +659,10 @@ renderer.setAnimationLoop(() => {
   const sectionProgress = entranceProgress * (1 - exitProgress);
   // Colour is split exactly at the physical boundary, rather than fading the whole model.
   modelEdges.setColorBoundary(sectionTop / viewportHeight, sectionBounds.bottom / viewportHeight, 64 / viewportHeight);
+  // Phones hide the model during Projects, then restore the same edge
+  // strengths as the purple section enters. Reverse scrolling reverses both.
+  modelEdges.setBlitThreshold(mobileLayout.matches
+    ? getHeroPaletteProgress(window.scrollY / viewportHeight) * 4.25 * (1 - entranceProgress) : 0);
   if (modelPlacement) {
     const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
     const progress = THREE.MathUtils.smoothstep(window.scrollY / Math.max(host.clientHeight, 1), 0, 0.7);
@@ -592,7 +671,7 @@ renderer.setAnimationLoop(() => {
     const rightOffset = Math.max(originalOffset, viewWidth * 0.29);
     modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion)
       .multiplyScalar(THREE.MathUtils.lerp(
-        THREE.MathUtils.lerp(originalOffset, rightOffset, progress), -viewWidth * .25, sectionProgress));
+        mobileLayout.matches ? rightOffset : THREE.MathUtils.lerp(originalOffset, rightOffset, progress), -viewWidth * .25, sectionProgress));
     // Lift along screen-up as the sitting animation progresses, keeping feet in view.
     const lift = (viewWidth / aspect) * 0.12 * THREE.MathUtils.smoothstep(sittingProgress, 0, 1)
       * (purpleSequence?.active ? purpleSequence.liftFactor : 1);
@@ -609,11 +688,13 @@ renderer.setAnimationLoop(() => {
     modelMotion.position.x += (targetOffsetX - modelMotion.position.x) * 0.055;
     modelMotion.position.y += (targetOffsetY - modelMotion.position.y) * 0.055;
   }
-  const paletteProgress = THREE.MathUtils.smoothstep(sittingProgress, 0, 1);
+  const paletteProgress = document.body.classList.contains('is-project-view')
+    ? 1 : getHeroPaletteProgress(window.scrollY / viewportHeight);
   const backgroundProgress = updateScrollPalette(paletteProgress);
   spaceBackground.draw(time, backgroundProgress);
   cursorBlob.draw(time);
   projectNavigation.update(time);
+  oneTimeText.update(time);
   animateProjectOutlines(time);
   if (!document.body.classList.contains('is-project-view')) modelEdges.render(scene, camera);
 });

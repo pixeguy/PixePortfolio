@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#d4c444" />
+    <title>Code Blue (NYP X IMH) - Zhan Feng</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      } }
+    </script>
+    <script type="module" src="./project-page.js"></script>
+  </head>
+  <body class="project-page">
+    <main id="viewer" aria-label="Code Blue (NYP X IMH)">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <section class="project-page-content" data-project-content aria-label="Code Blue (NYP X IMH) project page">
+        <a class="project-back" data-back href="./index.html"><span aria-hidden="true">&#8592;</span> Back</a>
+        <header class="project-banner">
+          <svg class="project-banner-mask" viewBox="0 0 1000 650" preserveAspectRatio="none" role="img" aria-labelledby="code-blue-banner-title">
+            <title id="code-blue-banner-title">Code Blue (NYP X IMH) title image</title>
+            <defs>
+              <clipPath id="code-blue-banner-clip" clipPathUnits="userSpaceOnUse">
+                <path id="code-blue-banner-shape" data-blob-mask d="M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z" />
+              </clipPath>
+            </defs>
+            <image href="./assets/code-blue-main-menu.png" width="1000" height="650" preserveAspectRatio="none" clip-path="url(#code-blue-banner-clip)" />
+            <use href="#code-blue-banner-shape" fill="none" stroke="var(--accent-color)" stroke-width="2" vector-effect="non-scaling-stroke" />
+          </svg>
+        </header>
+        <header class="project-heading">
+          <h1>Code Blue (NYP X IMH)</h1>
+          <div class="portfolio-divider" aria-hidden="true"></div>
+        </header>
+        <section class="project-body" aria-label="Code Blue (NYP X IMH) project content">
+          <div class="project-model-host" data-project-model="./assets/ER_Defib.fbx" data-animation="idle" data-mirror="true" role="img" aria-label="Code Blue defibrillator model"></div>
+          <div class="project-details">
+            <div class="video-launcher" data-video-player data-video-id="w3MdfKZid7I" aria-label="Code Blue gameplay video">
+              <button class="video-play-blob" data-video-play type="button" aria-label="Open and play Code Blue video"><span aria-hidden="true">▶</span></button>
+            </div>
+            <div class="project-copy">
+              <h2>Training for critical moments, without real-world consequences.</h2>
+              <p>Code Blue VR is a multiplayer virtual reality training simulator developed in collaboration between Nanyang Polytechnic (NYP) and the Institute of Mental Health (IMH).</p>
+              <p>The project aims to simulate realistic Code Blue emergency scenarios, allowing healthcare professionals to practise emergency response procedures, communication, and teamwork in an immersive virtual environment.</p>
+              <p>As part of the second development phase of this ongoing project, our team focused on establishing the core gameplay architecture and completing the end-to-end simulation workflow, while implementing as much training content as possible to support future development.</p>
+              <p>Working directly with IMH healthcare professionals, we translated real-world training requirements into interactive VR experiences.</p>
+              <section class="project-presentation" aria-labelledby="code-blue-presentation-title">
+                <h2 id="code-blue-presentation-title">Project presentation</h2>
+                <iframe class="project-presentation-frame" loading="eager" src="https://www.canva.com/design/DAHX_P7MyiE/hPzuoHDvG8pHzoxL3pvVWg/view?embed" title="Code Blue final project presentation" allowfullscreen allow="fullscreen"></iframe>
+                <a href="https://www.canva.com/design/DAHX_P7MyiE/hPzuoHDvG8pHzoxL3pvVWg/view" target="_blank" rel="noopener">Open the Code Blue final presentation in Canva</a>
+              </section>
+              <section class="project-features" aria-labelledby="code-blue-features-title">
+                <h3 id="code-blue-features-title">Features</h3>
+                <ul>
+                  <li>VR Interaction Framework</li>
+                  <li>FishNet Multiplayer Networking</li>
+                  <li>Modular Simulation Architecture</li>
+                  <li>Cross-Disciplinary Collaboration</li>
+                </ul>
+              </section>
+            </div>
+            <div class="photo-fan" data-photo-fan role="group" aria-label="Code Blue (NYP X IMH) photos: hover or use the up and down arrow keys to focus a photo">
+              <button class="photo-fan-card" type="button" aria-label="Focus Code Blue lobby with scenario selection and nursing roles"><img src="./assets/code-blue-multiplayer-lobby.png" alt="Code Blue lobby with scenario selection and nursing roles" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Code Blue defibrillator interface"><img src="./assets/code-blue-defibrillator.png" alt="Code Blue defibrillator interface" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Code Blue main menu with NYP and IMH branding"><img src="./assets/code-blue-main-menu.png" alt="Code Blue main menu with NYP and IMH branding" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Ventilation interaction during a patient simulation"><img src="./assets/code-blue-ventilation.png" alt="Ventilation interaction during a patient simulation" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Nursing team coordinating around a patient"><img src="./assets/code-blue-team-resuscitation.png" alt="Nursing team coordinating around a patient" loading="lazy" /></button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 import { nebulaNoise, NEBULA_MOTION } from './space-background.js';
 
 // Same deformation as the project outline, without hover or ripple movement.
-export function createBannerMasks(root, motionMultiplier = 4.4) {
+export function createBannerMasks(root) {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const masks = [...root.querySelectorAll('[data-blob-mask]')].map((path, index) => {
     const tokens = path.getAttribute('d').match(/[MCZ]|-?[0-9.]+/g);
@@ -16,7 +16,7 @@ export function createBannerMasks(root, motionMultiplier = 4.4) {
       speed: NEBULA_MOTION.minimumSpeed + Math.random() * NEBULA_MOTION.speedVariation };
   });
   function sample(mask, time) {
-    const flow = time * NEBULA_MOTION.flowRate * mask.speed * motionMultiplier + mask.phase;
+    const flow = time * NEBULA_MOTION.flowRate * mask.speed * 4.4 + mask.phase;
     const offsets = mask.points.map(point => ({
       x: (nebulaNoise(point.x * .003 + flow, point.y * .004 - flow * .53) - .5) * 32,
       y: (nebulaNoise(point.x * .004 - flow * .8 + 17, point.y * .003 + flow * .67) - .5) * 24,

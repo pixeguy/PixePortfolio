@@ -19,11 +19,16 @@ def correct_hips(rig, actions):
     standing = samples['Standing'][0][1].translation.copy()
     floor = samples['Floor'][0][1].translation.z
     seated = samples['Typing'][0][1].translation.z
+    fighting = samples['Fighting Idle'][0][1].translation.z if 'Fighting Idle' in samples else standing.z
+    jogging = samples['Jogging'][0][1].translation.z if 'Jogging' in samples else standing.z
     heights = {
         'Floor': (floor, floor), 'Standing': (standing.z, standing.z),
         'Typing': (seated, seated), 'Floor To Stand': (floor, standing.z),
         'Stand To Sit': (standing.z, seated), 'Sit To Type': (seated, seated),
         'Type To Sit': (seated, seated), 'Sit To Stand': (seated, standing.z),
+        'Stand To Fight': (standing.z, fighting), 'Fighting Idle': (fighting, fighting),
+        'Fight To Stand': (fighting, standing.z),
+        'Jogging': (jogging, jogging),
     }
     for name, action in clips.items():
         rig.animation_data.action = action
@@ -33,7 +38,7 @@ def correct_hips(rig, actions):
         start_delta = start - poses[0][1].translation.z
         end_delta = end - poses[-1][1].translation.z
         # Idle loops retain their vertical breathing rather than flattening it.
-        if name in ('Floor', 'Standing', 'Typing'):
+        if name in ('Floor', 'Standing', 'Typing', 'Fighting Idle', 'Jogging'):
             end_delta = start_delta
         for index, (frame, matrix) in enumerate(poses):
             bpy.context.scene.frame_set(frame)
@@ -49,9 +54,9 @@ def correct_hips(rig, actions):
 
 
 if __name__ == '__main__':
-    directory = Path(__file__).resolve().parent
-    target = directory / 'Standing Up Combined.fbx'
-    backup = directory / 'Standing Up Combined.before-hip-fix.fbx.bak'
+    directory = Path(__file__).resolve().parent.parent / 'assets'
+    target = directory / 'portfolio-character.fbx'
+    backup = directory / 'portfolio-character.before-hip-fix.fbx.bak'
     if not backup.exists():
         copy2(target, backup)
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -66,8 +71,8 @@ if __name__ == '__main__':
     bpy.context.scene.render.fps = 30
     bpy.context.scene.frame_set(1)
     for obj in bpy.context.scene.objects:
-        obj.select_set(obj == rig or (obj.type == 'MESH' and obj.name == 'Alpha_Surface'))
-    temporary = directory / 'Standing Up Combined.hips-fixed.fbx'
+        obj.select_set(obj == rig or (obj.type == 'MESH' and obj.name in {'Alpha_Surface', 'Alpha_Joints'}))
+    temporary = directory / 'portfolio-character.hips-fixed.fbx'
     bpy.ops.export_scene.fbx(filepath=str(temporary), use_selection=True, object_types={'ARMATURE', 'MESH'},
         add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True,
         bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='STRIP')

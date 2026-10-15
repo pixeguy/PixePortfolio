@@ -1,12 +1,21 @@
 import bpy, json, runpy
 from pathlib import Path
 
-directory = Path(__file__).resolve().parent
+tools_directory = Path(__file__).resolve().parent
+directory = tools_directory.parent / 'assets'
+source_directory = directory / 'sources/front-animations'
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.fbx(filepath=str(directory / 'Standing Up Combined.fbx'))
+bpy.ops.import_scene.fbx(filepath=str(directory / 'portfolio-character.fbx'))
 rig = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 retained = set(bpy.data.objects)
-new_names = ['Stand To Sit', 'Sit To Type', 'Typing', 'Type To Sit', 'Sit To Stand']
+sources = {
+    'Stand To Sit': 'Stand To Sit.fbx', 'Sit To Type': 'Sit To Type.fbx', 'Typing': 'Typing.fbx',
+    'Type To Sit': 'Type To Sit.fbx', 'Sit To Stand': 'Sit To Stand.fbx',
+    'Stand To Fight': 'Standing Idle To Fight Idle.fbx', 'Fighting Idle': 'Fighting Idle.fbx',
+    'Fight To Stand': 'Fight Idle To Standing Idle.fbx',
+    'Jogging': 'Jogging.fbx',
+}
+new_names = list(sources)
 clips = []
 for action in list(bpy.data.actions):
     if action.name.split('|')[-1] in new_names:
@@ -18,10 +27,10 @@ for action in clips:
     action.name = 'Standing' if 'looking around' in name else 'Floor' if 'sitting idle' in name else 'Floor To Stand' if 'standing up' in name else action.name.split('|')[-1]
     action.use_fake_user = True
 
-for name in ['Stand To Sit', 'Sit To Type', 'Typing', 'Type To Sit', 'Sit To Stand']:
+for name, filename in sources.items():
     previous_objects = set(bpy.data.objects)
     previous_actions = set(bpy.data.actions)
-    bpy.ops.import_scene.fbx(filepath=str(directory / (name + '.fbx')))
+    bpy.ops.import_scene.fbx(filepath=str(source_directory / filename))
     imported = set(bpy.data.objects) - previous_objects
     source = next(o for o in imported if o.type == 'ARMATURE')
     source_action = source.animation_data.action
@@ -45,16 +54,16 @@ for name in ['Stand To Sit', 'Sit To Type', 'Typing', 'Type To Sit', 'Sit To Sta
     for obj in imported: bpy.data.objects.remove(obj, do_unlink=True)
     for unused in set(bpy.data.actions) - previous_actions - {action}: bpy.data.actions.remove(unused)
 
-runpy.run_path(str(directory / 'fix-front-hips.py'))['correct_hips'](rig, clips)
+runpy.run_path(str(tools_directory / 'fix-front-hips.py'))['correct_hips'](rig, clips)
 rig.animation_data.action = clips[0]
 rig.animation_data.action_slot = clips[0].slots[0]
 bpy.context.scene.render.fps = 30
 bpy.context.scene.frame_set(1)
 for obj in bpy.context.scene.objects:
-    obj.select_set(obj in retained and (obj == rig or (obj.type == 'MESH' and obj.name == 'Alpha_Surface')))
-temporary = directory / 'Standing Up Combined.expanded.fbx'
+    obj.select_set(obj in retained and (obj == rig or (obj.type == 'MESH' and obj.name in {'Alpha_Surface', 'Alpha_Joints'})))
+temporary = directory / 'portfolio-character.expanded.fbx'
 bpy.ops.export_scene.fbx(filepath=str(temporary), use_selection=True, object_types={'ARMATURE', 'MESH'},
     add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False,
     bake_anim_simplify_factor=0, path_mode='STRIP')
-temporary.replace(directory / 'Standing Up Combined.fbx')
+temporary.replace(directory / 'portfolio-character.fbx')
 print('COMBINED_ANIMATIONS ' + json.dumps([{'name': a.name, 'frames': list(a.frame_range)} for a in clips]))

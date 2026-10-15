@@ -4,8 +4,8 @@ import { EDGE_SETTINGS } from './edge-effect.js';
 export const CURSOR_BLOB_SETTINGS = {
   minimumSpeed: 140, // Pixels per second.
   minimumDistance: 16, // Pixels of continuous movement before appearing.
-  minimumRadius: 12,
-  maximumRadius: 30,
+  minimumRadius: 15,
+  maximumRadius: 37.5,
   linger: 140, // Milliseconds before fading after qualifying movement stops.
   opacity: .42,
 };
@@ -58,6 +58,11 @@ export function createCursorBlob() {
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
       context.clearRect(0, 0, width, height);
+      if (document.body.classList.contains('video-pointer-active') || document.documentElement.classList.contains('video-overlay-open')) {
+        blob.opacity = 0; activeUntil = 0; travelled = 0; previous = null;
+        blob.x = cursor.x; blob.y = cursor.y;
+        return;
+      }
       const delta = Math.min((time - (lastFrame || time)) / 1000, .05);
       lastFrame = time;
       if (reducedMotion.matches) { blob.opacity = 0; return; }

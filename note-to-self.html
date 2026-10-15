@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#d4c444" />
+    <title>Note To Self - Zhan Feng</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      } }
+    </script>
+    <script type="module" src="./project-page.js"></script>
+  </head>
+  <body class="project-page">
+    <main id="viewer" aria-label="Note To Self">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <section class="project-page-content" data-project-content aria-label="Note To Self project page">
+        <a class="project-back" data-back href="./index.html"><span aria-hidden="true">&#8592;</span> Back</a>
+        <header class="project-banner">
+          <svg class="project-banner-mask" viewBox="0 0 1000 650" preserveAspectRatio="none" role="img" aria-labelledby="note-to-self-banner-title">
+            <title id="note-to-self-banner-title">Note To Self main menu</title>
+            <defs>
+              <clipPath id="note-to-self-banner-clip" clipPathUnits="userSpaceOnUse">
+                <path id="note-to-self-banner-shape" data-blob-mask d="M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z" />
+              </clipPath>
+            </defs>
+            <image href="./assets/note-to-self-main-menu.png" width="1000" height="650" preserveAspectRatio="none" clip-path="url(#note-to-self-banner-clip)" />
+            <use href="#note-to-self-banner-shape" fill="none" stroke="var(--accent-color)" stroke-width="2" vector-effect="non-scaling-stroke" />
+          </svg>
+        </header>
+        <header class="project-heading">
+          <h1>Note To Self</h1>
+          <div class="portfolio-divider" aria-hidden="true"></div>
+        </header>
+        <section class="project-body" aria-label="Note To Self project content">
+          <div class="project-model-host" data-project-model="./assets/teleporter.fbx" data-mirror="true" role="img" aria-label="Teleporter model from Note To Self"></div>
+          <div class="project-details">
+            <div class="project-copy">
+              <h2>You saw it. You wrote it down. So it must be true…right?</h2>
+              <p>Escape a cursed realm by navigating mazes filled with mysterious effect pads. During the Vision Phase, uncover their effects and leave notes for your future self.</p>
+              <p>When the maze begins, those notes are all you have to guide you — but can you really trust what you wrote?</p>
+              <section class="project-features" aria-labelledby="note-to-self-features-title">
+                <h3 id="note-to-self-features-title">Features</h3>
+                <ul>
+                  <li>Data-Driven Effect System</li>
+                  <li>Unity Tilemap</li>
+                  <li>Modular Trigger Architecture</li>
+                </ul>
+              </section>
+            </div>
+            <div class="photo-fan" data-photo-fan role="group" aria-label="Note To Self photos: hover over a photo or use the up and down arrow keys to focus it">
+              <button class="photo-fan-card" type="button" aria-label="Focus Maze overview showing coloured shapes and movement effect icons"><img src="./assets/note-to-self-maze-overview.png" alt="Maze overview showing coloured shapes and movement effect icons" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus A note assigning Safe, Heal, and Damage effects to colours and shapes"><img src="./assets/note-to-self-rule-selection.png" alt="A note assigning Safe, Heal, and Damage effects to colours and shapes" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Note To Self main menu with Tutorial, Play, and Quit buttons"><img src="./assets/note-to-self-main-menu.png" alt="Note To Self main menu with Tutorial, Play, and Quit buttons" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus A rule reminder showing safe and damaging combinations during a countdown"><img src="./assets/note-to-self-rule-reminder.png" alt="A rule reminder showing safe and damaging combinations during a countdown" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus A character navigating the maze towards a glowing teleporter"><img src="./assets/note-to-self-teleporter-gameplay.png" alt="A character navigating the maze towards a glowing teleporter" loading="lazy" /></button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -23,6 +23,21 @@
       <canvas id="starfield" aria-hidden="true"></canvas>
       <div id="name-backdrop" aria-hidden="true"><span class="name-word">Zhan</span><span class="name-word">Feng</span></div>
       <div id="canvas-host"></div>
+      <section id="fighting-section" aria-label="Fighting animation">
+        <div id="fighting-content" hidden>
+          <div class="fighting-intro">
+          <h2>Learning through play.</h2>
+          <p>I explore game development through projects, experiments, and small ideas. Each one is a chance to learn, refine my skills, and create something new.</p>
+          </div>
+        </div>
+          <section class="journey-timeline" aria-label="My Journey" hidden>
+            <h3>My Journey</h3>
+            <ol aria-label="Career journey, most recent first">
+              <li><h4>XR Dev Intern</h4><p>VThere · 2026 (3 months)</p></li>
+              <li><h4>Student</h4><p>Nanyang Polytechnic · 2024 – now</p></li>
+            </ol>
+          </section>
+      </section>
       <section id="portfolio" aria-label="Portfolio">
         <div class="portfolio-navigation">
         <div class="portfolio-tabs" role="tablist" aria-label="Portfolio sections">
@@ -36,71 +51,51 @@
         <section id="devlog-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="devlog-tab" tabindex="0" hidden></section>
       </section>
       <section id="purple-section" aria-label="Project image gallery">
+        <p id="section-transition-quote" aria-label="Keep creating. Keep learning. Keep moving forward." hidden><span></span><span class="section-title-caret" aria-hidden="true">|</span></p>
         <h2 id="section-scroll-title" aria-label="Achievements and Gallery"><span></span><span class="section-title-caret" aria-hidden="true">|</span></h2>
         <div class="section-gallery-stage">
         <div class="section-gallery" id="achievements-gallery">
-          <figure style="--image-width: 62%; --image-offset: 30%;">
-            <figcaption>Ahma's Stray search — character artwork</figcaption>
-            <img src="./assets/ahma-thumbnail-16x9.png" alt="Illustrated cat characters from Ahma's Stray search" loading="lazy" />
+          <figure style="--image-width: 78%; --image-offset: 12%;">
+            <figcaption>Directors List 5x</figcaption>
+            <img src="./assets/directors-list-2024.jpg" alt="" loading="lazy" />
           </figure>
-          <figure style="--image-width: 86%; --image-offset: 3%;">
-            <figcaption>Surface Tension — start screen</figcaption>
-            <img src="./assets/surfaceTension-thumbnail.png" alt="Surface Tension start screen" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 48%; --image-offset: 45%;">
-            <figcaption>Souls Like — project preview</figcaption>
-            <img src="./assets/SoulsLike.png" alt="Souls Like project screenshot" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 74%; --image-offset: 12%;">
-            <figcaption>HLSL shaders — post processing</figcaption>
-            <img src="./assets/PostProcessing.png" alt="HLSL shaders and post processing screenshot" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 55%; --image-offset: 2%;">
-            <figcaption>Horror Game — 3D OpenGL</figcaption>
-            <img src="./assets/HorrorOpenGL.png" alt="Horror Game in 3D OpenGL screenshot" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 90%; --image-offset: 8%;">
-            <figcaption>Game Physics — Unity</figcaption>
-            <img src="./assets/GamePhysicsUnity.png" alt="Game Physics In Unity screenshot" loading="lazy" />
+          <figure style="--image-width: 88%; --image-offset: 2%;">
+            <img src="./assets/directors-list-group.jpg" alt="" loading="lazy" />
           </figure>
           <figure style="--image-width: 64%; --image-offset: 28%;">
-            <figcaption>First Person Shooter — prototype</figcaption>
-            <img src="./assets/Fpsshooter.png" alt="First Person Shooter Prototype screenshot" loading="lazy" />
+            <img src="./assets/directors-list-2025.jpg" alt="" loading="lazy" />
+          </figure>
+          <figure style="--image-width: 82%; --image-offset: 9%;">
+            <figcaption>3rd place NYP x H2 Game Jam</figcaption>
+            <img src="./assets/ahma-team-award.jpg" alt="" loading="lazy" />
+          </figure>
+          <figure style="--image-width: 72%; --image-offset: 22%;">
+            <figcaption>Top 25% out of 2k entries Brackeys Game Jam</figcaption>
+            <img src="./assets/note-to-self-main-menu.png" alt="" loading="lazy" />
           </figure>
         </div>
         <div class="section-gallery" id="photo-gallery">
-          <figure style="--image-width: 78%; --image-offset: 16%;">
-            <figcaption>Ahma's Stray search — character artwork</figcaption>
-            <img src="./assets/ahma-thumbnail-16x9.png" alt="Illustrated cat characters from Ahma's Stray search" loading="lazy" />
+          <figure style="--image-width: 76%; --image-offset: 18%;">
+            <img src="./assets/return-to-sender-train-carriage.png" alt="Envelope gameplay in a train carriage" loading="lazy" />
           </figure>
-          <figure style="--image-width: 52%; --image-offset: 4%;">
-            <figcaption>Surface Tension — start screen</figcaption>
-            <img src="./assets/surfaceTension-thumbnail.png" alt="Surface Tension start screen" loading="lazy" />
+          <figure style="--image-width: 58%; --image-offset: 3%;">
+            <img src="./assets/code-blue-ventilation.png" alt="Code Blue ventilation interaction" loading="lazy" />
           </figure>
-          <figure style="--image-width: 88%; --image-offset: 10%;">
-            <figcaption>Souls Like — project preview</figcaption>
-            <img src="./assets/SoulsLike.png" alt="Souls Like project screenshot" loading="lazy" />
+          <figure style="--image-width: 87%; --image-offset: 8%;">
+            <img src="./assets/soul-be-it-phoenix-battle.png" alt="Soul Be It phoenix boss battle" loading="lazy" />
           </figure>
-          <figure style="--image-width: 60%; --image-offset: 35%;">
-            <figcaption>HLSL shaders — post processing</figcaption>
-            <img src="./assets/PostProcessing.png" alt="HLSL shaders and post processing screenshot" loading="lazy" />
+          <figure style="--image-width: 63%; --image-offset: 32%;">
+            <img src="./assets/surface-tension-mask-gameplay.png" alt="Surface Tension mask gameplay" loading="lazy" />
           </figure>
-          <figure style="--image-width: 72%; --image-offset: 2%;">
-            <figcaption>Horror Game — 3D OpenGL</figcaption>
-            <img src="./assets/HorrorOpenGL.png" alt="Horror Game in 3D OpenGL screenshot" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 46%; --image-offset: 48%;">
-            <figcaption>Game Physics — Unity</figcaption>
-            <img src="./assets/GamePhysicsUnity.png" alt="Game Physics In Unity screenshot" loading="lazy" />
-          </figure>
-          <figure style="--image-width: 82%; --image-offset: 12%;">
-            <figcaption>First Person Shooter — prototype</figcaption>
-            <img src="./assets/Fpsshooter.png" alt="First Person Shooter Prototype screenshot" loading="lazy" />
+          <figure style="--image-width: 81%; --image-offset: 4%;">
+            <img src="./assets/ahma-cat-album.png" alt="Ahma cat album" loading="lazy" />
           </figure>
         </div>
         </div>
       </section>
-      <section id="nebula-return" aria-label="Yellow nebula section"></section>
+      <section id="nebula-return" aria-label="Contact section">
+        <h2 id="contact-heading" aria-label="Contact me" hidden><span></span></h2>
+      </section>
       <section id="loading-screen" role="status" aria-label="Loading 3D model">
         <svg class="loading-wave-definitions" width="0" height="0" aria-hidden="true">
           <defs>

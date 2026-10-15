@@ -29,9 +29,11 @@ export function createProjectModels() {
     preview.loading = true;
     loader.load(preview.url, object => {
       if (disposed) {
+        preview.resolveReady(false);
         object.traverse(child => { if (child.isMesh) child.geometry.dispose(); });
         return;
       }
+      try {
       preview.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
       preview.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
       preview.renderer.setClearColor(0x000000, 0);
@@ -78,6 +80,7 @@ export function createProjectModels() {
         preview.mixer.setTime(0);
       } else measurePose();
       if (bounds.isEmpty()) {
+        preview.resolveReady(false);
         console.error('Project FBX has no renderable mesh:', preview.url);
         return;
       }
@@ -102,20 +105,36 @@ export function createProjectModels() {
       preview.scene.add(preview.motion);
       preview.radius = size.length() * scale * 0.5;
       preview.ready = true;
+      preview.resolveReady(true);
+      } catch (error) {
+        console.error('Could not initialize project model:', preview.url, error);
+        preview.resolveReady(false);
+      }
     }, undefined, error => {
       console.error('Could not load project model:', preview.url, error);
       preview.host.setAttribute('aria-label', 'Project model unavailable');
+      preview.resolveReady(false);
     });
   }
   return {
     add(host, url, animation = 'idle') {
       const configuredSpeed = Number(host.dataset.animationSpeed ?? 1);
       const animationSpeed = Number.isFinite(configuredSpeed) && configuredSpeed > 0 ? configuredSpeed : 1;
-      const preview = { host, url, animation, animationSpeed, scene: new THREE.Scene(),
+      // Optional per-project framing: values below 1 bring the camera closer.
+      const configuredDistance = Number(host.dataset.cameraDistance ?? 1);
+      const cameraDistance = Number.isFinite(configuredDistance) && configuredDistance > 0 ? configuredDistance : 1;
+      const configuredOverscan = Number(host.dataset.viewerOverscan ?? 1);
+      const viewerOverscan = Number.isFinite(configuredOverscan) && configuredOverscan >= 1 ? configuredOverscan : 1;
+      const preview = { host, url, animation, animationSpeed, cameraDistance, viewerOverscan, scene: new THREE.Scene(),
         camera: new THREE.PerspectiveCamera(35, 1, 0.01, 100),
         visible: false, loading: false, ready: false, width: 0, height: 0 };
       previews.push(preview);
+      preview.readyPromise = new Promise(resolve => { preview.resolveReady = resolve; });
       visibility.observe(host);
+    },
+    whenReady() {
+      previews.forEach(preview => { if (!preview.loading) load(preview); });
+      return Promise.all(previews.map(preview => preview.readyPromise));
     },
     update(time) {
       if (disposed || time - lastFrame < 33) return;
@@ -130,8 +149,10 @@ export function createProjectModels() {
           preview.renderer.setSize(width, height, false);
           preview.camera.aspect = width / height;
           const vertical = THREE.MathUtils.degToRad(preview.camera.fov / 2);
-          const horizontal = Math.atan(Math.tan(vertical) * preview.camera.aspect);
-          const distance = preview.radius / Math.sin(Math.min(vertical, horizontal)) * 1.25;
+          // Widen the canvas without letting auto-fit enlarge the character again.
+          const framingAspect = preview.camera.aspect / preview.viewerOverscan;
+          const horizontal = Math.atan(Math.tan(vertical) * framingAspect);
+          const distance = preview.radius / Math.sin(Math.min(vertical, horizontal)) * 1.25 / 1.3 * preview.cameraDistance;
           preview.camera.position.set(.8, .35, 1).normalize().multiplyScalar(distance);
           preview.camera.far = Math.max(100, distance * 10);
           preview.camera.lookAt(0, 0, 0);
@@ -150,6 +171,7 @@ export function createProjectModels() {
     },
     destroy() {
       disposed = true;
+      previews.forEach(preview => preview.resolveReady(false));
       window.removeEventListener('pointermove', updatePointer);
       window.removeEventListener('pointerleave', resetPointer);
       window.removeEventListener('blur', resetPointer);

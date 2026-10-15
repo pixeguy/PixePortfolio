@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#d4c444" />
+    <title>Soul Be It - Zhan Feng</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      } }
+    </script>
+    <script type="module" src="./project-page.js"></script>
+  </head>
+  <body class="project-page">
+    <main id="viewer" aria-label="Soul Be It">
+      <canvas id="nebula" aria-hidden="true"></canvas>
+      <canvas id="starfield" aria-hidden="true"></canvas>
+      <section class="project-page-content" data-project-content aria-label="Soul Be It project page">
+        <a class="project-back" data-back href="./index.html"><span aria-hidden="true">&#8592;</span> Back</a>
+        <header class="project-banner">
+          <svg class="project-banner-mask" viewBox="0 0 1000 650" preserveAspectRatio="none" role="img" aria-labelledby="soul-be-it-banner-title">
+            <title id="soul-be-it-banner-title">Soul Be It title image</title>
+            <defs>
+              <clipPath id="soul-be-it-banner-clip" clipPathUnits="userSpaceOnUse">
+                <path id="soul-be-it-banner-shape" data-blob-mask d="M 115 38 C 245 8 365 35 485 25 C 665 8 790 4 896 43 C 980 76 960 171 974 270 C 995 384 978 489 914 565 C 855 635 729 612 599 625 C 465 644 372 614 239 621 C 103 627 38 565 28 463 C 9 355 47 298 24 207 C 6 110 42 55 115 38 Z" />
+              </clipPath>
+            </defs>
+            <image href="./assets/soul-be-it-title.png" width="1000" height="650" preserveAspectRatio="none" clip-path="url(#soul-be-it-banner-clip)" />
+            <use href="#soul-be-it-banner-shape" fill="none" stroke="var(--accent-color)" stroke-width="2" vector-effect="non-scaling-stroke" />
+          </svg>
+        </header>
+        <header class="project-heading">
+          <h1>Soul Be It</h1>
+          <div class="portfolio-divider" aria-hidden="true"></div>
+        </header>
+        <section class="project-body" aria-label="Soul Be It project content">
+          <div class="project-model-host project-model-host--poseidon" data-project-model="./assets/soul-be-it-poseidon-idle.fbx?v=20261014-independent-rigs-0-60" data-camera-distance="0.392" data-viewer-overscan="2" data-animation="idle" data-mirror="true" role="img" aria-label="Poseidon body and tail playing their synchronized idle"></div>
+          <div class="project-details">
+            <section class="project-presentation" aria-labelledby="soul-presentation-title">
+              <h2 id="soul-presentation-title">Project presentation</h2>
+              <iframe class="project-presentation-frame" loading="eager" src="https://www.canva.com/design/DAHX-1TeDP8/X1oOBcofGZF541AmFvDELA/view?embed" title="Soul Be It project presentation" allowfullscreen allow="fullscreen"></iframe>
+              <a href="https://www.canva.com/design/DAHX-1TeDP8/X1oOBcofGZF541AmFvDELA/view" target="_blank" rel="noopener">Open the presentation in Canva</a>
+            </section>
+            <div class="project-copy">
+              <h2>Three gods. Three mythologies. One team standing in their way.</h2>
+              <p>Challenge three mythical bosses — the Phoenix, Loki, and Poseidon — in a multiplayer action game centred around challenging, reactive boss encounters.</p>
+              <p>Building upon my previous Souls-like boss project, this project greatly expands the complexity of the boss AI, introducing multi-phase encounters, deeper attack patterns, and bosses capable of reacting dynamically to player behaviour.</p>
+              <p>The game also features three playable classes with unique movesets and abilities, supported by globally hosted multiplayer infrastructure that allows players to create and join independent game sessions.</p>
+              <section class="project-features" aria-labelledby="soul-be-it-features-title">
+                <h3 id="soul-be-it-features-title">Features</h3>
+                <ul>
+                  <li>Reactive Combo Decision-Making</li>
+                  <li>Hierarchical Boss AI Architecture</li>
+                  <li>Scalable Multi-Phase Boss System</li>
+                  <li>Dedicated Multiplayer Server Architecture</li>
+                  <li>Networked Gameplay & Voice Communication</li>
+                  <li>Multi-Class Player Architecture</li>
+                </ul>
+              </section>
+            </div>
+            <div class="photo-fan" data-photo-fan role="group" aria-label="Soul Be It photos: hover or use the up and down arrow keys to focus a photo">
+              <button class="photo-fan-card" type="button" aria-label="Focus Soul Be It multiplayer lobby"><img src="./assets/soul-be-it-lobby.png" alt="Soul Be It multiplayer lobby" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Players facing a phoenix in a boss arena"><img src="./assets/soul-be-it-phoenix-battle.png" alt="Players facing a phoenix in a boss arena" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Soul Be It illustrated title artwork"><img src="./assets/soul-be-it-title.png" alt="Soul Be It illustrated title artwork" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Knight boss battle with a sweeping weapon attack"><img src="./assets/soul-be-it-knight-battle.png" alt="Knight boss battle with a sweeping weapon attack" loading="lazy" /></button>
+              <button class="photo-fan-card" type="button" aria-label="Focus Poseidon and his tentacles in an underwater-themed arena"><img src="./assets/soul-be-it-poseidon-battle.png" alt="Poseidon and his tentacles in an underwater-themed arena" loading="lazy" /></button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

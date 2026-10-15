@@ -25,6 +25,7 @@ export function createEdgeEffect(renderer) {
       normalTexture: { value: target.texture },
       pixelOffset: { value: new THREE.Vector2() },
       edgeThreshold: { value: EDGE_SETTINGS.threshold },
+      blitThreshold: { value: 0 },
       outlineColor: { value: new THREE.Color(EDGE_SETTINGS.color) },
       boundaryEnabled: { value: 0 },
       boundaryTop: { value: 0 },
@@ -43,6 +44,7 @@ export function createEdgeEffect(renderer) {
       uniform sampler2D normalTexture;
       uniform vec2 pixelOffset;
       uniform float edgeThreshold;
+      uniform float blitThreshold;
       uniform vec3 outlineColor;
       uniform float boundaryEnabled;
       uniform float boundaryTop;
@@ -65,6 +67,10 @@ export function createEdgeEffect(renderer) {
         // Alpha also catches silhouettes against the transparent background.
         float silhouette = max(abs(right.a - left.a), abs(up.a - down.a));
         float outline = max(normalEdge, silhouette);
+        if (blitThreshold > 0.0) {
+          float strength = max(difference, silhouette);
+          outline *= smoothstep(blitThreshold - 0.1, blitThreshold + 0.1, strength);
+        }
         // Match the section's elliptical CSS corners at both its entrance and exit.
         float horizontal = vUv.x * 2.0 - 1.0;
         float curve = boundaryCurve * (1.0 - sqrt(max(0.0, 1.0 - horizontal * horizontal)));
@@ -84,6 +90,9 @@ export function createEdgeEffect(renderer) {
   const previousColor = new THREE.Color();
 
   return {
+    setBlitThreshold(value) {
+      material.uniforms.blitThreshold.value = Math.max(0, value);
+    },
     setColorBoundary(top, bottom, curve) {
       material.uniforms.boundaryEnabled.value = top < 1 && bottom > 0 ? 1 : 0;
       material.uniforms.boundaryTop.value = top;

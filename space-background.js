@@ -1,4 +1,6 @@
 export const NEBULA_MOTION = { flowRate: 0.000035, minimumSpeed: 3, speedVariation: 0.25 };
+let activeBackground = null;
+export function getSpaceBackground() { return activeBackground; }
 
 const math = {
   lerp: (a, b, t) => a + (b - a) * t,
@@ -271,10 +273,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     return path;
   }
 
-  function drawNebula(time) {
+  let cachedClouds = [], cloudTime = -1;
+  function drawNebula(time, context = nebulaContext) {
     const width = host.clientWidth;
     const height = host.clientHeight;
-    nebulaContext.clearRect(0, 0, width, height);
+    context.clearRect(0, 0, width, height);
+    if (cloudTime !== time) {
     const shapes = nebulaBlobs.map(blob => nebulaShape(blob, time));
     const paired = new Set();
     const clouds = [];
@@ -286,13 +290,16 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     shapes.forEach((shape,index)=>{
       if (!paired.has(index)) clouds.push({ path: shape.path, blobs: [shape.blob] });
     });
-    for (const { path, blobs } of clouds) {
+    cachedClouds = clouds;
+    cloudTime = time;
+    }
+    for (const { path, blobs } of cachedClouds) {
       // Shade the complete shared contour; there is no separate connector layer.
       for (const [index,blob] of blobs.entries()) {
         const color = mixColor(blob.color.split(',').map(Number), goldenColors[nebulaBlobs.indexOf(blob) % goldenColors.length]);
         const x = blob.x;
         const y = blob.y;
-        const gradient = nebulaContext.createRadialGradient(
+        const gradient = context.createRadialGradient(
           x - blob.radiusX * 0.18,
           y - blob.radiusY * 0.2,
           0,
@@ -304,12 +311,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
         gradient.addColorStop(0.62, `rgba(${color},${blob.opacity * 0.72})`);
         gradient.addColorStop(1, `rgba(${color},${blob.opacity * 0.08})`);
 
-        nebulaContext.save();
-        nebulaContext.shadowColor = `rgba(${color},${blob.opacity * 0.75})`;
-        nebulaContext.shadowBlur = index === 0 ? Math.max(blob.radiusX, blob.radiusY) * 0.45 : 0;
-        nebulaContext.fillStyle = gradient;
-        nebulaContext.fill(path);
-        nebulaContext.restore();
+        context.save();
+        context.shadowColor = `rgba(${color},${blob.opacity * 0.75})`;
+        context.shadowBlur = index === 0 ? Math.max(blob.radiusX, blob.radiusY) * 0.45 : 0;
+        context.fillStyle = gradient;
+        context.fill(path);
+        context.restore();
       }
     }
   }
@@ -338,27 +345,58 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     }));
   }
 
-  function drawStarfield(time) {
-    starContext.clearRect(0, 0, starfieldWidth, starfieldHeight);
+  function drawStarfield(time, context = starContext) {
+    context.clearRect(0, 0, starfieldWidth, starfieldHeight);
     for (const star of stars) {
       const shimmer = 0.35 + (0.65 * (0.5 + 0.5 * Math.sin(time * 0.001 * star.speed + star.phase)));
       const x = Math.round(star.x);
       const y = Math.round(star.y);
-      starContext.globalAlpha = shimmer;
+      context.globalAlpha = shimmer;
       const starRgb = [1, 3, 5].map(offset => parseInt(star.color.slice(offset, offset + 2), 16));
-      starContext.fillStyle = `rgb(${mixColor(starRgb, [65, 45, 84])})`;
-      starContext.fillRect(x, y, star.size, star.size);
+      context.fillStyle = `rgb(${mixColor(starRgb, [65, 45, 84])})`;
+      context.fillRect(x, y, star.size, star.size);
       if (star.cross) {
-        starContext.globalAlpha = shimmer * 0.82;
-        starContext.fillRect(x - 2, y + 1, 5, 1);
-        starContext.fillRect(x, y - 1, 1, 5);
+        context.globalAlpha = shimmer * 0.82;
+        context.fillRect(x - 2, y + 1, 5, 1);
+        context.fillRect(x, y - 1, 1, 5);
       }
     }
-    starContext.globalAlpha = 1;
+    context.globalAlpha = 1;
   }
 
-  return {
-    resize() { resizeNebula(); resizeStarfield(); },
+  const alternateClouds = document.createElement('canvas');
+  const alternateStars = document.createElement('canvas');
+  let alternateTime = -Infinity;
+  const api = {
+    resize() { resizeNebula(); resizeStarfield(); cloudTime = -1; alternateTime = -Infinity; },
+    drawRegion(context, bounds, time) {
+      if (time - alternateTime >= 33) {
+        if (alternateClouds.width !== nebulaCanvas.width || alternateClouds.height !== nebulaCanvas.height) {
+          alternateClouds.width = nebulaCanvas.width; alternateClouds.height = nebulaCanvas.height;
+        }
+        if (alternateStars.width !== starCanvas.width || alternateStars.height !== starCanvas.height) {
+          alternateStars.width = starCanvas.width; alternateStars.height = starCanvas.height;
+        }
+        const cloudContext = alternateClouds.getContext('2d'), starsContext = alternateStars.getContext('2d');
+        cloudContext.setTransform(nebulaCanvas.width / host.clientWidth, 0, 0, nebulaCanvas.height / host.clientHeight, 0, 0);
+        starsContext.setTransform(starCanvas.width / host.clientWidth, 0, 0, starCanvas.height / host.clientHeight, 0, 0);
+        const previousPalette = paletteProgress;
+        paletteProgress = 0;
+        // Use the last main-cloud pose: both palettes share exactly one contour.
+        drawNebula(cloudTime < 0 ? time : cloudTime, cloudContext);
+        drawStarfield(time, starsContext);
+        paletteProgress = previousPalette;
+        alternateTime = time;
+      }
+      context.clearRect(0, 0, bounds.width, bounds.height);
+      context.fillStyle = '#030306'; context.fillRect(0, 0, bounds.width, bounds.height);
+      const origin = host.getBoundingClientRect();
+      for (const canvas of [alternateClouds, alternateStars]) {
+        const ratioX = canvas.width / host.clientWidth, ratioY = canvas.height / host.clientHeight;
+        context.drawImage(canvas, (bounds.left - origin.left) * ratioX, (bounds.top - origin.top) * ratioY,
+          bounds.width * ratioX, bounds.height * ratioY, 0, 0, bounds.width, bounds.height);
+      }
+    },
     draw(time, progress = 0) {
       paletteProgress = math.clamp(progress, 0, 1);
       if (time - nebulaLastDraw >= 33) {
@@ -368,4 +406,6 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
       drawStarfield(time);
     },
   };
+  activeBackground = api;
+  return api;
 }

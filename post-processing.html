@@ -40,11 +40,40 @@
         <section class="project-body" aria-label="HLSL Shaders and Post Processing project content">
           <div class="project-model-host" data-project-model="./assets/matBall.fbx" data-mirror="true" role="img" aria-label="HLSL material ball model"></div>
           <div class="project-details">
-            <div class="project-copy">
-              <p>Project overview coming soon. This section will introduce HLSL Shaders and Post Processing and its core gameplay.</p>
-              <p>More details about the development process, my contributions, and what I learned will go here. The image below is a preview of the project.</p>
-            </div>
-            <img class="project-detail-image" src="./assets/PostProcessing.png" alt="HLSL Shaders and Post Processing project screenshot" loading="lazy"  />
+            <section class="project-part" aria-labelledby="post-processing-heading">
+              <div class="video-launcher" data-video-player data-video-id="_TdgejqrHlo" aria-label="Reflections on Post Processing And Shader Graphs. video">
+                <button class="video-play-blob" data-video-play type="button" aria-label="Open and play Reflections on Post Processing And Shader Graphs. video"><span aria-hidden="true">▶</span></button>
+              </div>
+              <div class="project-copy">
+                <h2 id="post-processing-heading">Reflections on Post Processing And Shader Graphs.</h2>
+                <p>Working on this project deepened my understanding of how post-processing effects are built and applied in a rendering pipeline. Experimenting with HLSL and Shader Graph helped me connect visual results with the underlying math and rendering concepts.</p>
+                <p>By testing and iterating on different effects, I learned how small parameter changes can drastically affect the final look. This process encouraged me to be more intentional with design choices while balancing visual style and performance.</p>
+                <section class="project-features" aria-labelledby="post-processing-scope">
+                  <h3 id="post-processing-scope">Scope</h3>
+                  <ul>
+                    <li>Post Processing HLSL</li>
+                    <li>Shader Graph</li>
+                  </ul>
+                </section>
+              </div>
+            </section>
+            <section class="project-part" aria-labelledby="lighting-heading">
+              <div class="video-launcher" data-video-player data-video-id="2pkMw2DyKDo" aria-label="Reflections on Lighting &amp; Shader Effects. video">
+                <button class="video-play-blob" data-video-play type="button" aria-label="Open and play Reflections on Lighting &amp; Shader Effects. video"><span aria-hidden="true">▶</span></button>
+              </div>
+              <div class="project-copy">
+                <h2 id="lighting-heading">Reflections on Lighting &amp; Shader Effects.</h2>
+                <p>This project helped me build a deeper understanding of real-time lighting and how rendering pipelines work under the hood. Implementing forward lighting and then creating a custom deferred rendering pipeline showed me how lighting calculations and data flow differ across approaches.</p>
+                <p>By working directly with shaders and render passes, I gained more control over visual quality and performance. The process pushed me to think more technically about how light, materials, and screen-space data come together to form the final image.</p>
+                <section class="project-features" aria-labelledby="lighting-scope">
+                  <h3 id="lighting-scope">Scope</h3>
+                  <ul>
+                    <li>Building and customizing a renderer pipeline for deferred rendering</li>
+                    <li>Writing lighting and shader logic for multiple light types</li>
+                  </ul>
+                </section>
+              </div>
+            </section>
           </div>
         </section>
       </section>

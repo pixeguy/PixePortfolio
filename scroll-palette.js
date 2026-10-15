@@ -6,10 +6,13 @@ function smoothRange(progress, start, end) {
   const value = Math.max(0, Math.min(1, (progress - start) / (end - start)));
   return value * value * (3 - 2 * value);
 }
+export function getForegroundPaletteProgress(progress) {
+  return smoothRange(progress, .45, 1);
+}
 export function updateScrollPalette(progress) {
   progress = Math.max(0, Math.min(1, progress));
   const leading = smoothRange(progress, 0, .55);
-  const following = smoothRange(progress, .45, 1);
+  const following = getForegroundPaletteProgress(progress);
   const backgroundProgress = leading;
   const foregroundProgress = following;
   if (Math.abs(previous - progress) < .002) return backgroundProgress;
