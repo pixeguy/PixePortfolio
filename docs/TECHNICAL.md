@@ -67,7 +67,7 @@ scrubbed animation without changing its FBX duration.
 Current `main.js` timing:
 
 ```js
-FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 2.4, exitDuration: 1.2 }
+FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 4.4, exitDuration: 1.2 }
 HERO_SCROLL = { start: fightExitStart + FIGHT_SCROLL.exitDuration, duration: 2.2 }
 SECTION_SCROLL = { duration: 1, turnDegrees: 65, startBeforeTop: .7, exitDuration: 1 }
 ```
@@ -138,9 +138,18 @@ There are intentionally several text controllers with different behavior:
   It types over .35 viewport, stays pinned with .75 viewport of accumulated scroll,
   then moves upward. It does not forward-backspace on exit.
 - Timeline: begins 1.35 viewports after the fighting idle begins, types over .4
-  viewport, and erases with foreground palette fade. The vertical line grows
+  viewport, and erases from idle offset 2.5 to 2.95 before Skills. The vertical line grows
   downward, then erases bottom-to-top to match the reverse text order. Branches
   animate based on each node's measured position in the chart.
+- Skills: `#skills-section` follows the timeline with Programming, Engines &
+  Graphics, and Planning rows. Each row places its category beside a comma-separated
+  skill list, with horizontal dividers between rows and no button-like borders.
+  `SKILLS_SCROLL` in `main.js` sets the handoff and
+  reveal timing: reveal starts 3 viewports after Fighting Idle begins, lasts .45
+  viewport, and backspaces with the foreground palette transition. The idle hold
+  is extended to 4.4 viewports, so the existing animation sequence continues after
+  readers have seen the skills. `prepareTypingText` preserves inline HTML and
+  reserves text dimensions; all skill edits are made in `index.html`.
 - One-time text: IntersectionObserver starts visible tabs, project text, page
   buttons, and captions. Paragraphs use 11 ms per character; other text uses
   22 ms. A session-local Set stores seen strings, so repeated text stays revealed.
@@ -285,10 +294,10 @@ the home purple section. Reduced motion disables it.
 
 ## 11. Limits and maintenance
 
-### Mobile home layout
+### Mobile and tablet home layout
 
-These home-specific changes use the existing `max-width: 700px` breakpoint in
-both CSS and `main.js`'s `mobileLayout` MediaQueryList. The character starts at
+The compact home layout uses `max-width: 1024px` in
+CSS and `main.js`'s `compactPortfolio` MediaQueryList. The character starts at
 its right-hand screen offset immediately, skipping the initial lateral movement.
 Across the Journey exit/standing-to-floor range, the home edge effect's
 instance-local blit threshold rises from 0 to 4.25. It filters both normal edges
@@ -298,14 +307,109 @@ restoring it there and in Contact. Reverse scrolling reverses the effect.
 Mobile purple paint is drawn by a z-index 2 pseudo-element, the model remains at
 3, and text/gallery content sits at 4. The parent has no stacking context, so its
 background cannot cover the character while its images remain above it.
-Resizing above 700px restores threshold 0 and
+Resizing above 1024px restores threshold 0 and
 the original placement logic; project detail renderers keep the default effect.
-Mobile project panels occupy 100% width with 1.5rem side padding and no entry
-left margin. Wider viewports retain their existing panel width and positioning.
+Mobile/tablet project panels occupy 100% width with 1.5rem side padding and no entry
+left margin. Desktop retains its panel width and positioning.
+
+Home outlines at every viewport size interpolate from warm amber `#dca85e` to aubergine
+`#63435b` with the foreground palette; their purple-section portion remains amber.
+Detail models at every viewport size use muted violet `#514063` on yellow, following the text's palette
+instead of the background blob hues. `setColors()` is an
+instance override, leaving text colours and cursor colours unchanged.
+Achievement/Gallery containers use full mobile width with 1rem side
+padding, preserving the existing per-figure width and horizontal offset values.
+Their fixed heading is at z-index 6. The controller updates a vertical gradient
+mask on each figure: image portions approaching the heading fade over 36 pixels
+and disappear above a 12-pixel clearance. The title is positioned 1rem below the
+safe-area inset, moving the fade band toward the top. The transition quote is
+centred at 50svh across 92% width. This keeps the heading readable while
+the rest of each photograph remains visible. Masks apply only below 701px.
+
+Mobile project detail layouts use a dedicated first grid row for the model:
+a 52svh canvas fills the content width and scrolls naturally above the copy/media in row
+2. Models no longer sit behind project text. Pages without models use row 1 for
+their content, so no empty model stage is reserved.
+The model canvas respects the content's 1rem side gutters and is centred inside a
+deforming SVG blob window. `createBannerMasks` animates its contour in the existing
+viewer loop. A unique SVG clipPath references that same contour in normalized
+coordinates, clipping the model canvas and controls together as it
+deforms. Large animated limbs and zoomed models cannot draw beyond the blob.
+The window remains transparent over the main yellow background, with violet
+model outlines and purple controls. It has no alternate background canvas.
+Desktop retains its layout and now shares the same model colours.
+A sphere fit using the narrower field of view and
+50% margin reserves room for rotation and zoom without shifting the model sideways.
+Mobile fitting ignores canvas overscan but applies each page's camera-distance
+multiplier: .567 for the mutant boss and .392 for Poseidon, enlarging these models
+relative to the standard mobile fit. Desktop retains its existing settings.
+
+`MODEL_WINDOW` in `project-models.js` controls mobile gestures: zoom is clamped to
+.5–1.5 times the fit; rotation spans 0–65 degrees from the existing right-facing
+pose. Bottom-right buttons ease to the left/right endpoints. Horizontal dragging
+changes the angle proportionally (100 degrees per window width), and two captured
+pointers control pinch zoom. A temporary labelled Zoom slider uses the same limits
+and can be dragged with a mouse in a mobile-width desktop preview. Pinching keeps
+the slider in sync. SVG chevrons centre the rotation arrows, and controls sit inset
+from the blob's lower corners. Mirrored canvases compensate the rotation sign.
+The window uses `touch-action: none` to own pinch/swipe gestures; scroll the page
+outside the model window. Content below it keeps normal touch scrolling. Gesture
+listeners, SVG masks, and controls are removed on navigation. Mobile stacking
+overrides follow desktop rules so the home paragraph and timeline sit above the model.
 
 Useful narrow widths for future manual RWD review are 320, 360, 390, and 430 CSS
 pixels, plus either side of the 700px breakpoint. No browser RWD verification was
 performed as part of this first mobile pass.
+
+### Tablet layout and social links
+
+The home project/gallery layout extends through 1024 CSS pixels. `compactPortfolio`
+in `main.js` applies the model's reversible blit-threshold hide/reveal to phones
+and tablets. From 701–1024px the project panel fills the page and removes the
+entry's left offset. Gallery width, title position, stacking, and photo fade masks
+use the same 1024px breakpoint in CSS and `purple-sequence.js`. The mobile model
+window and gestures still use the 700px breakpoint; home model placement uses 1024px.
+Individual project model hosts above 700px have a sticky top offset of 7.5rem
+(previously 6rem), placing them lower without changing scale or animation.
+Tablets override this with `clamp(11rem, 25svh, 22rem)` for a lower model position,
+and apply a 1.2 scale to the outer model group without modifying FBX animation.
+Tablet render surfaces extend to 140% of the model slot in both axes, or 180%
+for Poseidon, centred around the same slot. `project-models.js` scales render
+dimensions and camera distance together to add clipping clearance while retaining
+the intended model size. The sticky slot and surrounding content do not move.
+Tablet model hosts remove the desktop -2.5rem horizontal translation, shifting
+each project model 2.5rem right toward the centre while retaining its overscan.
+Poseidon is the exception: it retains the original -2.5rem horizontal translation.
+Its host has an explicit lower stacking level than the details column, including
+the Canva presentation, so the expanded model cannot paint over that content.
+The home model also starts at its right-side offset on tablets, matching mobile.
+Tablet gallery headings use 80% width and a 2.5–3.5rem responsive font, with
+.75rem padding above and below, vertically centring the words while keeping the
+same measured photo-mask boundary. Quotes use
+3.5–5.25rem type and image captions use 1.05rem. Project thumbnails fill the entry's
+inner width, with 2–2.5rem titles and 1rem descriptions; the outline extends 1.25rem
+at the top/sides and 2.5rem below to give copy more room. Tablet timelines are
+centred at 50svh, the learning title/paragraph group is centred at 50svh, and the hero name
+sits at 48svh. Hero social links have 44px circular borders on every viewport,
+with a small glyph-alignment inset from the name's left edge.
+The introductory typewriter wraps individual text nodes while retaining inline
+HTML such as `<b>`, `<strong>`, and `<br>`. The whole intro uses `translateY(-50%)`
+around a 50svh centre while typing/holding, then scrolls upward using the existing
+hold timing. Its full formatted height is reserved while letters are hidden.
+Hero buttons scale to 1.15 on hover, while contact text links scale to 1.05 from
+their left edge; pressing scales them down. Game links use `.project-game-link`
+in the Ahma, Surface Tension, Note To Self, and Re:turn to Sender HTML pages,
+directly after Features and before the image fan.
+Ahma, Surface Tension, and Note To Self place their jam-result paragraph between
+Features and the itch.io link. Home project entries use the padded `.project-surface`
+itself as the anchor; its hit area extends to the outline bounds, so activating
+the blob's padding navigates just like activating the title, image, or description.
+
+`index.html` contains inline SVG itch.io/YouTube links beneath the hero name and
+larger text links below Contact me. Hero links appear when the name finishes typing
+and hide as it backspaces; contact links follow the heading's visibility. Both use
+the existing foreground palette and are included in the home containers made inert
+during project navigation. Their URLs are edited directly in `index.html`.
 
 ### Souls Like video overlay
 
@@ -335,7 +439,7 @@ canvas layers. There are no TV power animations or hover-loaded embeds. Project
 views suppress the root scrollbar and scroll only their content container;
 opening the modal locks that container too. The X is a centred SVG cross.
 
-`data-video-id` still uses the earlier sample YouTube video. The embed uses
+`data-video-id` selects the video for each launcher. The embed uses
 controls=1 and fs=1 to restore YouTube playback controls and fullscreen. Branding,
 titles, ads, and related-video overlays remain under YouTube's control. Playback
 also depends on its availability and browser autoplay permissions. A supplied

@@ -1,0 +1,67 @@
+name: Deploy main to SiteGround
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: siteground-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Deploy website files
+        shell: bash
+        env:
+          SG_HOST: ${{ secrets.SITEGROUND_HOST }}
+          SG_USER: ${{ secrets.SITEGROUND_USER }}
+          SG_PRIVATE_KEY: ${{ secrets.SITEGROUND_SSH_KEY }}
+          SG_KEY_PASSPHRASE: ${{ secrets.SITEGROUND_SSH_PASSPHRASE }}
+          SG_KNOWN_HOSTS: ${{ secrets.SITEGROUND_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          for required in SG_HOST SG_USER SG_PRIVATE_KEY SG_KNOWN_HOSTS; do
+            if [ -z "${!required}" ]; then
+              echo "::error::Missing deployment secret: $required (see docs/DEPLOYMENT.md)."
+              exit 1
+            fi
+          done
+
+          umask 077
+          deploy_ssh_dir="$RUNNER_TEMP/siteground-ssh"
+          mkdir -p "$deploy_ssh_dir"
+          printf '%s\n' "$SG_PRIVATE_KEY" | tr -d '\r' > "$deploy_ssh_dir/key"
+          printf '%s\n' "$SG_KNOWN_HOSTS" | tr -d '\r' > "$deploy_ssh_dir/known_hosts"
+          cat > "$deploy_ssh_dir/askpass" <<'ASKPASS'
+          #!/bin/sh
+          printf '%s\n' "$SG_KEY_PASSPHRASE"
+          ASKPASS
+          chmod 700 "$deploy_ssh_dir/askpass"
+          eval "$(ssh-agent -s)" > /dev/null
+          trap 'ssh-agent -k > /dev/null; rm -rf "$deploy_ssh_dir"' EXIT
+          SSH_ASKPASS="$deploy_ssh_dir/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0 \
+            ssh-add "$deploy_ssh_dir/key" < /dev/null
+          unset SG_PRIVATE_KEY SG_KEY_PASSPHRASE
+
+          export RSYNC_RSH="ssh -p 18765 -i $deploy_ssh_dir/key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$deploy_ssh_dir/known_hosts -o IdentitiesOnly=yes -o ConnectTimeout=30"
+          rsync -az --delete-delay --itemize-changes \
+            --exclude='/assets/sources/' \
+            --include='/*.html' \
+            --include='/*.css' \
+            --include='/*.js' \
+            --include='/assets/***' \
+            --exclude='*' \
+            ./ "$SG_USER@$SG_HOST:/home/customer/www/jermainetai.work/public_html/"

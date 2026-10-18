@@ -32,9 +32,11 @@ export function createPurpleSequence(fbx, mixer, section) {
   const gallery = section.querySelector('#photo-gallery');
   const heading = section.querySelector('#section-scroll-title');
   const headingText = heading.firstElementChild;
+  const mobileLayout = window.matchMedia('(max-width: 1024px)');
+  const galleryPhotos = [...stage.querySelectorAll('.section-gallery figure')];
   const quote = section.querySelector('#section-transition-quote');
   const quoteText = quote.firstElementChild;
-  const quoteContent = 'Keep creating.\nKeep learning.\nKeep moving forward.';
+  const quoteContent = 'Make Games,\nPlay Games,\nSleep,\nRepeat';
   let liftFactor = 1, current = null;
   let displayedTitle = '', desiredTitle = '', count = 0, titlePhase = 'idle', titleClock = 0;
 
@@ -183,6 +185,16 @@ export function createPurpleSequence(fbx, mixer, section) {
       desiredTitle = contentReady && galleryBounds.bottom > headingY + height * .3
         ? (galleryBounds.top <= height * .65 ? 'Gallery' : 'Achievements') : '';
       updateHeading(delta);
+      if (mobileLayout.matches && contentReady) {
+        // Mask only the portion approaching/passing behind the fixed heading;
+        // lower parts stay visible instead of fading the entire photograph.
+        const titleBottom = headingY + (heading.offsetHeight || 40);
+        for (const photo of galleryPhotos) {
+          const top = photo.getBoundingClientRect().top;
+          photo.style.setProperty('--photo-mask-start', `${Math.max(0, titleBottom + 12 - top)}px`);
+          photo.style.setProperty('--photo-mask-end', `${Math.max(0, titleBottom + 48 - top)}px`);
+        }
+      }
       if (bounds.bottom < 0 || bounds.top > height) heading.hidden = true;
     },
   };

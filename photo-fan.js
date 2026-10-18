@@ -15,7 +15,7 @@ export function createPhotoFans(root) {
       const height = cards[0].clientHeight;
       const spacing = height * .38;
       // Reserve the same space for every hover state so Features never jumps.
-      fan.style.height = `${Math.max(460, height * (cards.length * .38 + 1.8))}px`;
+      fan.style.height = `${Math.max(window.matchMedia('(max-width: 700px)').matches ? 320 : 460, height * (cards.length * .38 + 1.8))}px`;
       cards.forEach((card, position) => {
         const relative = position - (active ?? middle);
         const baseRow = (position - middle) * spacing;
@@ -35,7 +35,6 @@ export function createPhotoFans(root) {
         // rightward, away from the model column on the left.
         card.style.setProperty('--fan-angle', `${-(position - middle) * 9}deg`);
         card.style.setProperty('--fan-row', `${row}px`);
-        card.style.setProperty('--fan-scale', '1');
         const restShift = -cards[0].clientWidth * .1 * arc;
         const hoverShift = position === active ? -Math.min(28, cards[0].clientWidth * .07) : 0;
         card.style.setProperty('--fan-shift', `${restShift + hoverShift}px`);

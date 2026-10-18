@@ -4,11 +4,12 @@ from pathlib import Path
 from mathutils import Matrix
 
 assets = Path(__file__).resolve().parent.parent / 'assets'
+sources = assets / 'sources/poseidon'
 bpy.ops.wm.read_factory_settings(use_empty=True)
 parts = []
 for prefix, filename in [('Body', 'Poseidon_IdleV4_Body.fbx'), ('Tail', 'Poseidon_IdleV4_Tail.fbx')]:
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.fbx(filepath=str(assets / filename), anim_offset=0)
+    bpy.ops.import_scene.fbx(filepath=str(sources / filename), anim_offset=0)
     imported = set(bpy.data.objects) - before
     rig = next(obj for obj in imported if obj.type == 'ARMATURE')
     meshes = [obj for obj in imported if obj.type == 'MESH' and not obj.name.startswith('shoe_')]

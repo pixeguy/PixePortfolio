@@ -20,12 +20,11 @@ export function createJourneyTimeline(section) {
   const nodes = [...chart.children];
   let previousCount = -1;
   return {
-    update(scroll, introStart, colourFade, loaded) {
+    update(scroll, introStart, colourFade, loaded, handoff = 0) {
       const start = introStart + 1.35;
       const enter = THREE.MathUtils.clamp((scroll - start) / .4, 0, 1);
-      // Keep the timeline until its foreground colour starts changing, then
-      // backspace and remove the lines over the same colour-fade range.
-      const erase = colourFade;
+      // Clear the timeline before Skills, keeping reverse scroll reversible.
+      const erase = Math.max(colourFade, handoff);
       section.hidden = !loaded || enter <= 0 || erase >= 1;
       const count = Math.floor(letters.length * Math.min(enter, 1 - erase));
       if (count !== previousCount) {

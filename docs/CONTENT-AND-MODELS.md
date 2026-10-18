@@ -68,13 +68,15 @@ with reference overscan 2 and camera distance .392, enlarging the character abou
 
 Existing fan pages place the title/thumbnail in the middle slot, highest in the
 fixed stacking order. The envelope and teleporter previews use `data-mirror`
-to face the opposite direction. All project previews stick at `top: 6rem`;
-their height caps reserve 7.5rem of vertical clearance.
+to face the opposite direction. Desktop previews stick at `top: 7.5rem`;
+tablets use a lower responsive offset and enlarged render surfaces. Mobile previews
+use a separate masked model window above the content. See the responsive layout
+section in TECHNICAL.md for the sizing, gesture limits, and tablet exceptions.
 
 ### Poseidon assembly
 
 `tools/combine-poseidon.py` imports `Poseidon_IdleV4_Body.fbx` and
-`Poseidon_IdleV4_Tail.fbx`, retaining their distinct meshes together. Their
+`Poseidon_IdleV4_Tail.fbx` from `assets/sources/poseidon/`, retaining their distinct meshes together. Their
 skeletons contain duplicated branches, so each rig is reduced to bones actually
 weighted by its own meshes plus necessary parent chains (61 body bones, 71 tail
 bones). Body and Tail prefixes prevent binding collisions. The body file owns
@@ -161,9 +163,6 @@ export. The combined FBX also contains the animation data, so these are not
 required for playback or manual editing of that combined file in Blender.
 Deleting them would require recovering/extracting replacement inputs or changing
 the combiner before it could run again.
-
-`assets/sources/soulsBoss-original.fbx` is an archived Boss source. No current
-script or browser module loads it. The Boss rebuild Python script was removed.
 
 ### Rebuild and hip correction
 

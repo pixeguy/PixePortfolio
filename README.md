@@ -21,6 +21,10 @@ Three.js 0.180.0 on jsDelivr. Those imports need an internet connection.
 
 ## Deployment
 
+Automatic deployment from `main` is configured in
+`.github/workflows/deploy-siteground.yml`. Complete the one-time GitHub secrets
+setup in [Deployment instructions](docs/DEPLOYMENT.md) to activate it.
+
 Serve the root HTML, CSS, JavaScript, and runtime assets over HTTP(S). Preserve
 relative paths and filename case. Include all individual project HTML pages so
 direct visits and refreshes work. No SPA rewrite to `index.html` is needed.
@@ -28,3 +32,8 @@ direct visits and refreshes work. No SPA rewrite to `index.html` is needed.
 `tools/`, `docs/`, and `assets/sources/` are not runtime dependencies and can be
 excluded from deployment. The launch scripts are only for local development.
 The bundled front character is `assets/portfolio-character.fbx`.
+
+Runtime models and images live directly in `assets/`. Editable front-animation
+clips and Poseidon's body/tail inputs are grouped under `assets/sources/` and are
+used only by the offline authoring scripts. Obsolete exports and the unused Boss
+archive have been removed.

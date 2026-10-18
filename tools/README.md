@@ -10,7 +10,8 @@ They require Blender's Python environment.
 - `fix-front-hips.py`: shared hip correction; can also repair the combined FBX
   directly. Its standalone mode saves a backup before overwriting.
 - `combine-poseidon.py`: combines the body and tail source FBXs into
-  `assets/soul-be-it-poseidon-idle.fbx`. Retains independent body and tail rigs,
+  `assets/soul-be-it-poseidon-idle.fbx` from `assets/sources/poseidon/`.
+  Retains independent body and tail rigs,
   prunes unused branches, and gives bones unique prefixes. Captures local bone
   poses and world prop transforms before removing helpers, then keys them into
   synchronized frames 0–60 at 24 FPS. Maps the sources' active keyed ranges to
@@ -23,8 +24,6 @@ export. The combiner already calls the hip fixer automatically.
 The separate front animation FBXs are editable inputs, not runtime dependencies.
 The combiner still imports them when rebuilding: the combined file alone is
 enough to run the site, but deleting the source clips breaks that workflow.
-`assets/sources/soulsBoss-original.fbx` is an archival original; its former rebuild
-script has been removed.
 
 Example from the project folder:
 

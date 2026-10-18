@@ -21,13 +21,18 @@
     <main id="viewer" aria-label="Interactive 3D model viewer">
       <canvas id="nebula" aria-hidden="true"></canvas>
       <canvas id="starfield" aria-hidden="true"></canvas>
-      <div id="name-backdrop" aria-hidden="true"><span class="name-word">Zhan</span><span class="name-word">Feng</span></div>
+      <div id="name-backdrop"><span class="name-word">Zhan</span><span class="name-word">Feng</span>
+        <nav id="hero-social-links" aria-label="Find me online" hidden>
+          <a href="https://pixeguy.itch.io/" target="_blank" rel="noopener noreferrer" aria-label="My games on itch.io"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16l2 5v3c0 1.1-.9 2-2 2-.8 0-1.5-.4-2-1-.5.6-1.2 1-2 1s-1.5-.4-2-1c-.5.6-1.2 1-2 1s-1.5-.4-2-1c-.5.6-1.2 1-2 1s-1.5-.4-2-1c-.5.6-1.2 1-2 1-1.1 0-2-.9-2-2V8l2-5Z"/><path d="M5 15v6h14v-6M9 21v-4h6v4M2 8h20"/></svg></a>
+          <a href="https://www.youtube.com/@jermaine8697/videos" target="_blank" rel="noopener noreferrer" aria-label="My YouTube videos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 6 3-6 3Z"/></svg></a>
+        </nav>
+      </div>
       <div id="canvas-host"></div>
       <section id="fighting-section" aria-label="Fighting animation">
         <div id="fighting-content" hidden>
           <div class="fighting-intro">
-          <h2>Learning through play.</h2>
-          <p>I explore game development through projects, experiments, and small ideas. Each one is a chance to learn, refine my skills, and create something new.</p>
+          <h2>Building Worlds Through Code.</h2>
+          <p>I’m a game developer with a passion for programming, exploring how <b>simulations, system architecture, and AI</b> can work together with thoughtful gameplay mechanics and design to bring immersive worlds to life. <br><br>Through my projects, I enjoy turning creative ideas into responsive, engaging experiences while continually refining my technical and design skills.</p>
           </div>
         </div>
           <section class="journey-timeline" aria-label="My Journey" hidden>
@@ -36,6 +41,14 @@
               <li><h4>XR Dev Intern</h4><p>VThere · 2026 (3 months)</p></li>
               <li><h4>Student</h4><p>Nanyang Polytechnic · 2024 – now</p></li>
             </ol>
+          </section>
+          <section id="skills-section" aria-labelledby="skills-heading" hidden>
+            <h3 id="skills-heading">What I Work With</h3>
+            <dl class="skills-groups">
+              <div><dt>Programming</dt><dd><ul><li>C++,</li><li>C#,</li><li>Web Development</li></ul></dd></div>
+              <div><dt>Engines &amp; Graphics</dt><dd><ul><li>Unity,</li><li>Unreal Engine,</li><li>GameMaker,</li><li>OpenGL</li></ul></dd></div>
+              <div><dt>Planning</dt><dd><ul><li>Project Management</li></ul></dd></div>
+            </dl>
           </section>
       </section>
       <section id="portfolio" aria-label="Portfolio">
@@ -51,7 +64,7 @@
         <section id="devlog-panel" class="portfolio-panel" role="tabpanel" aria-labelledby="devlog-tab" tabindex="0" hidden></section>
       </section>
       <section id="purple-section" aria-label="Project image gallery">
-        <p id="section-transition-quote" aria-label="Keep creating. Keep learning. Keep moving forward." hidden><span></span><span class="section-title-caret" aria-hidden="true">|</span></p>
+        <p id="section-transition-quote" aria-label="Make Games, Play Games, Sleep, Repeat" hidden><span></span><span class="section-title-caret" aria-hidden="true">|</span></p>
         <h2 id="section-scroll-title" aria-label="Achievements and Gallery"><span></span><span class="section-title-caret" aria-hidden="true">|</span></h2>
         <div class="section-gallery-stage">
         <div class="section-gallery" id="achievements-gallery">
@@ -70,7 +83,7 @@
             <img src="./assets/ahma-team-award.jpg" alt="" loading="lazy" />
           </figure>
           <figure style="--image-width: 72%; --image-offset: 22%;">
-            <figcaption>Top 25% out of 2k entries Brackeys Game Jam</figcaption>
+            <figcaption>Top 25% out of 2.2k entries · Brackeys Game Jam 2026.2</figcaption>
             <img src="./assets/note-to-self-main-menu.png" alt="" loading="lazy" />
           </figure>
         </div>
@@ -95,6 +108,10 @@
       </section>
       <section id="nebula-return" aria-label="Contact section">
         <h2 id="contact-heading" aria-label="Contact me" hidden><span></span></h2>
+        <nav class="contact-social-links" aria-label="Contact and social links">
+          <a href="https://pixeguy.itch.io/" target="_blank" rel="noopener noreferrer">itch.io <span aria-hidden="true">↗</span></a>
+          <a href="https://www.youtube.com/@jermaine8697/videos" target="_blank" rel="noopener noreferrer">YouTube <span aria-hidden="true">↗</span></a>
+        </nav>
       </section>
       <section id="loading-screen" role="status" aria-label="Loading 3D model">
         <svg class="loading-wave-definitions" width="0" height="0" aria-hidden="true">

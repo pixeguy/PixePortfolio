@@ -14,8 +14,11 @@ import { createJourneyTimeline } from './journey-timeline.js';
 const host = document.querySelector('#canvas-host');
 // Match the existing narrow CSS layout; wider viewports retain desktop behavior.
 const mobileLayout = window.matchMedia('(max-width: 700px)');
+const compactPortfolio = window.matchMedia('(max-width: 1024px)');
 // In viewport heights: raise duration to require more scrolling to finish sitting.
-const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 2.4, exitDuration: 1.2 };
+const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 4.4, exitDuration: 1.2 };
+// Offsets from the start of Fighting Idle, measured in viewport heights.
+const SKILLS_SCROLL = { timelineExit: 2.5, start: 3, revealDuration: .45 };
 const fightExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration;
 const HERO_SCROLL = { start: fightExitStart + FIGHT_SCROLL.exitDuration, duration: 2.2 };
 function getHeroPaletteProgress(scroll) {
@@ -26,32 +29,58 @@ document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 
 document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
 const fightingContent = document.querySelector('#fighting-content');
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
-fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + .32) * 100}svh`;
-const fightingText = [...fightingContent.querySelectorAll('.fighting-intro h2, .fighting-intro p')].map(element => {
-  const text = element.textContent;
-  element.setAttribute('aria-label', text);
+fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + .5) * 100}svh`;
+function prepareTypingText(element) {
+  const accessibleCopy = element.cloneNode(true);
+  accessibleCopy.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+  element.setAttribute('aria-label', accessibleCopy.textContent);
   const wrapper = document.createElement('span');
   wrapper.setAttribute('aria-hidden', 'true');
-  const letters = [...text].map(character => {
-    const letter = document.createElement('span');
-    letter.textContent = character;
-    letter.style.opacity = '0';
-    wrapper.append(letter);
-    return letter;
-  });
+  // Retain inline markup, wrapping only text nodes in revealable letters.
+  wrapper.append(...element.childNodes);
+  const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  const letters = [];
+  for (const node of textNodes) {
+    const fragment = document.createDocumentFragment();
+    for (const character of node.textContent) {
+      const letter = document.createElement('span');
+      letter.textContent = character;
+      letter.style.opacity = '0';
+      fragment.append(letter);
+      letters.push(letter);
+    }
+    node.replaceWith(fragment);
+  }
   element.replaceChildren(wrapper);
   return letters;
-}).flat();
+}
+const fightingText = [...fightingContent.querySelectorAll('.fighting-intro h2, .fighting-intro p')].flatMap(prepareTypingText);
+const skillsSection = document.querySelector('#skills-section');
+const skillsText = [...skillsSection.querySelectorAll('h3, dt, li')].flatMap(prepareTypingText);
+let skillsTextCount = -1;
 let fightingTextCount = -1;
 function updateFightingText(scroll) {
   const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
   const typed = THREE.MathUtils.clamp((scroll - idleStart) / .35, 0, 1);
   // Hold for another 40% of a viewport after the typing has completed.
   const heldScroll = THREE.MathUtils.clamp(scroll - idleStart, 0, .75);
-  fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + heldScroll + .36) * 100}svh`;
+  fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + heldScroll + .5) * 100}svh`;
   const count = Math.floor(fightingText.length * typed);
   fightingContent.hidden = !loadingScreen.hidden || scroll < idleStart || scroll >= HERO_SCROLL.start;
-  journeyTimeline.update(scroll, idleStart, getForegroundPaletteProgress(getHeroPaletteProgress(scroll)), loadingScreen.hidden);
+  const colourFade = getForegroundPaletteProgress(getHeroPaletteProgress(scroll));
+  const timelineExit = THREE.MathUtils.smoothstep(scroll - idleStart, SKILLS_SCROLL.timelineExit, SKILLS_SCROLL.start - .05);
+  journeyTimeline.update(scroll, idleStart, colourFade, loadingScreen.hidden, timelineExit);
+  const skillsReveal = THREE.MathUtils.clamp((scroll - idleStart - SKILLS_SCROLL.start) / SKILLS_SCROLL.revealDuration, 0, 1);
+  const skillsProgress = Math.min(skillsReveal, 1 - colourFade);
+  skillsSection.hidden = !loadingScreen.hidden || skillsProgress <= 0;
+  skillsSection.style.opacity = String(Math.min(1, skillsProgress * 4));
+  const skillsCount = Math.floor(skillsText.length * skillsProgress);
+  if (skillsCount !== skillsTextCount) {
+    skillsTextCount = skillsCount;
+    skillsText.forEach((letter, index) => { letter.style.opacity = index < skillsCount ? '1' : '0'; });
+  }
   if (count === fightingTextCount) return;
   fightingTextCount = count;
   fightingText.forEach((letter, index) => {
@@ -188,7 +217,7 @@ window.addEventListener('pointercancel', () => {
 function createProjectEntry(project) {
   const entry = document.createElement('article');
   entry.className = 'project-entry';
-  const surface = document.createElement('div');
+  const surface = document.createElement(project.href ? 'a' : 'div');
   surface.className = 'project-surface';
   entry.append(surface);
   const svgNamespace = 'http://www.w3.org/2000/svg';
@@ -255,8 +284,9 @@ function createProjectEntry(project) {
   content.className = 'project-content';
   content.append(heading, image, description);
   if (project.href) {
-    const link = document.createElement('a');
-    link.className = 'project-link';
+    // The anchor owns the padding and outline too, so the entire blob activates it.
+    const link = surface;
+    link.classList.add('project-link');
     link.href = project.href;
     link.addEventListener('click', event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -265,7 +295,6 @@ function createProjectEntry(project) {
       projectNavigation.open(link.href);
     });
     link.append(content);
-    surface.append(link);
   } else {
     surface.append(content);
   }
@@ -361,6 +390,9 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
 host.appendChild(renderer.domElement);
 const modelEdges = createEdgeEffect(renderer);
+const modelGold = new THREE.Color('#dca85e');
+const modelViolet = new THREE.Color('#63435b');
+const modelColor = new THREE.Color();
 
 function fitModel(object) {
   object.updateMatrixWorld(true);
@@ -498,6 +530,7 @@ function updateTitleBackspace() {
   if (!titleSequence.length) return;
   titleCaret.hidden = titleEraseProgress >= 1;
   const count = Math.min(titleTypedCount, Math.floor(titleSequence.length * (1 - titleEraseProgress)));
+  document.querySelector('#hero-social-links').hidden = count < titleSequence.length;
   if (count === titleVisibleCount) return;
   titleVisibleCount = count;
   titleSequence.forEach(({ letter }, index) => letter.classList.toggle('is-typed', index < count));
@@ -659,9 +692,9 @@ renderer.setAnimationLoop(() => {
   const sectionProgress = entranceProgress * (1 - exitProgress);
   // Colour is split exactly at the physical boundary, rather than fading the whole model.
   modelEdges.setColorBoundary(sectionTop / viewportHeight, sectionBounds.bottom / viewportHeight, 64 / viewportHeight);
-  // Phones hide the model during Projects, then restore the same edge
+  // Phones and tablets hide the model during Projects, then restore the same edge
   // strengths as the purple section enters. Reverse scrolling reverses both.
-  modelEdges.setBlitThreshold(mobileLayout.matches
+  modelEdges.setBlitThreshold(compactPortfolio.matches
     ? getHeroPaletteProgress(window.scrollY / viewportHeight) * 4.25 * (1 - entranceProgress) : 0);
   if (modelPlacement) {
     const aspect = host.clientWidth / Math.max(host.clientHeight, 1);
@@ -671,7 +704,7 @@ renderer.setAnimationLoop(() => {
     const rightOffset = Math.max(originalOffset, viewWidth * 0.29);
     modelPlacement.position.set(1, 0, 0).applyQuaternion(camera.quaternion)
       .multiplyScalar(THREE.MathUtils.lerp(
-        mobileLayout.matches ? rightOffset : THREE.MathUtils.lerp(originalOffset, rightOffset, progress), -viewWidth * .25, sectionProgress));
+        compactPortfolio.matches ? rightOffset : THREE.MathUtils.lerp(originalOffset, rightOffset, progress), -viewWidth * .25, sectionProgress));
     // Lift along screen-up as the sitting animation progresses, keeping feet in view.
     const lift = (viewWidth / aspect) * 0.12 * THREE.MathUtils.smoothstep(sittingProgress, 0, 1)
       * (purpleSequence?.active ? purpleSequence.liftFactor : 1);
@@ -691,6 +724,8 @@ renderer.setAnimationLoop(() => {
   const paletteProgress = document.body.classList.contains('is-project-view')
     ? 1 : getHeroPaletteProgress(window.scrollY / viewportHeight);
   const backgroundProgress = updateScrollPalette(paletteProgress);
+  modelColor.copy(modelGold).lerp(modelViolet, getForegroundPaletteProgress(paletteProgress));
+  modelEdges.setColors(modelColor, modelGold);
   spaceBackground.draw(time, backgroundProgress);
   cursorBlob.draw(time);
   projectNavigation.update(time);

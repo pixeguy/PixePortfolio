@@ -88,8 +88,13 @@ export function createEdgeEffect(renderer) {
   const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const bufferSize = new THREE.Vector2();
   const previousColor = new THREE.Color();
+  let colorOverride = null;
 
   return {
+    setColors(outline = null, boundary = '#d4c444') {
+      colorOverride = outline;
+      material.uniforms.boundaryColor.value.set(boundary);
+    },
     setBlitThreshold(value) {
       material.uniforms.blitThreshold.value = Math.max(0, value);
     },
@@ -107,7 +112,7 @@ export function createEdgeEffect(renderer) {
       const offset = EDGE_SETTINGS.thickness * renderer.getPixelRatio();
       material.uniforms.pixelOffset.value.set(offset / bufferSize.x, offset / bufferSize.y);
       material.uniforms.edgeThreshold.value = EDGE_SETTINGS.threshold;
-      material.uniforms.outlineColor.value.set(EDGE_SETTINGS.color);
+      material.uniforms.outlineColor.value.set(colorOverride || EDGE_SETTINGS.color);
       const previousTarget = renderer.getRenderTarget();
       const previousMaterial = scene.overrideMaterial;
       const previousAlpha = renderer.getClearAlpha();
