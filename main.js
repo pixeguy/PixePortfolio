@@ -16,9 +16,12 @@ const host = document.querySelector('#canvas-host');
 const mobileLayout = window.matchMedia('(max-width: 700px)');
 const compactPortfolio = window.matchMedia('(max-width: 1024px)');
 // In viewport heights: raise duration to require more scrolling to finish sitting.
-const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 4.4, exitDuration: 1.2 };
+const INTRO_SCROLL = { typeDuration: .35, holdUntil: .75, exitDuration: 1.1, timelineGap: .25 };
+const timelineStart = INTRO_SCROLL.holdUntil + INTRO_SCROLL.exitDuration + INTRO_SCROLL.timelineGap;
+const extraJourneySpace = timelineStart - 1.35;
+const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 4.4 + extraJourneySpace, exitDuration: 1.2 };
 // Offsets from the start of Fighting Idle, measured in viewport heights.
-const SKILLS_SCROLL = { timelineExit: 2.5, start: 3, revealDuration: .45 };
+const SKILLS_SCROLL = { timelineExit: 2.5 + extraJourneySpace, start: 3 + extraJourneySpace, revealDuration: .45 };
 const fightExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration;
 const HERO_SCROLL = { start: fightExitStart + FIGHT_SCROLL.exitDuration, duration: 2.2 };
 function getHeroPaletteProgress(scroll) {
@@ -29,7 +32,11 @@ document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 
 document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
 const fightingContent = document.querySelector('#fighting-content');
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
-fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + .5) * 100}svh`;
+let introHeight = 0;
+new ResizeObserver(entries => {
+  const height = entries[0].contentRect.height;
+  if (height > 0) introHeight = height;
+}).observe(fightingContent);
 function prepareTypingText(element) {
   const accessibleCopy = element.cloneNode(true);
   accessibleCopy.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
@@ -63,15 +70,19 @@ let skillsTextCount = -1;
 let fightingTextCount = -1;
 function updateFightingText(scroll) {
   const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
-  const typed = THREE.MathUtils.clamp((scroll - idleStart) / .35, 0, 1);
-  // Hold for another 40% of a viewport after the typing has completed.
-  const heldScroll = THREE.MathUtils.clamp(scroll - idleStart, 0, .75);
-  fightingContent.style.top = `${(FIGHT_SCROLL.enterDuration + heldScroll + .5) * 100}svh`;
+  const introScroll = scroll - idleStart;
+  const typed = THREE.MathUtils.clamp(introScroll / INTRO_SCROLL.typeDuration, 0, 1);
+  // Keep the layout still while typing, then move only the composited transform.
+  // Measure the actual text height so long paragraphs clear even on narrow screens.
+  const exitProgress = THREE.MathUtils.clamp(
+    (introScroll - INTRO_SCROLL.holdUntil) / INTRO_SCROLL.exitDuration, 0, 1);
+  const exitDistance = host.clientHeight * .5 + introHeight * .5 + 32;
+  fightingContent.style.transform = `translateY(calc(-50% - ${exitProgress * exitDistance}px))`;
   const count = Math.floor(fightingText.length * typed);
-  fightingContent.hidden = !loadingScreen.hidden || scroll < idleStart || scroll >= HERO_SCROLL.start;
+  fightingContent.hidden = !loadingScreen.hidden || introScroll < 0 || exitProgress >= 1;
   const colourFade = getForegroundPaletteProgress(getHeroPaletteProgress(scroll));
   const timelineExit = THREE.MathUtils.smoothstep(scroll - idleStart, SKILLS_SCROLL.timelineExit, SKILLS_SCROLL.start - .05);
-  journeyTimeline.update(scroll, idleStart, colourFade, loadingScreen.hidden, timelineExit);
+  journeyTimeline.update(scroll, idleStart + timelineStart, colourFade, loadingScreen.hidden, timelineExit);
   const skillsReveal = THREE.MathUtils.clamp((scroll - idleStart - SKILLS_SCROLL.start) / SKILLS_SCROLL.revealDuration, 0, 1);
   const skillsProgress = Math.min(skillsReveal, 1 - colourFade);
   skillsSection.hidden = !loadingScreen.hidden || skillsProgress <= 0;

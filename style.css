@@ -71,7 +71,7 @@ body { background: var(--page-color); }
 .page-content-hidden #purple-section { opacity: 0; pointer-events: none; }
 .is-project-view #purple-section { visibility: hidden; }
 #fighting-section { position: absolute; left: 0; width: 100%; z-index: 2; pointer-events: none; transition: opacity 450ms ease; }
-#fighting-content { position: absolute; left: 8%; width: 40%; max-width: 38rem; transform: translateY(-50%); color: var(--accent-color); }
+#fighting-content { position: fixed; top: 50svh; left: 8%; width: 40%; max-width: 38rem; transform: translateY(-50%); color: var(--accent-color); overflow-anchor: none; }
 #fighting-content[hidden] { display: none; }
 #fighting-content h2 { margin: 0 0 1.5rem; font: 700 clamp(2.5rem, 4.5vw, 5rem)/1.05 Arial, Helvetica, sans-serif; letter-spacing: -.04em; }
 #fighting-content p { margin: 0; font: 400 clamp(1rem, 1.3vw, 1.35rem)/1.6 Arial, Helvetica, sans-serif; }

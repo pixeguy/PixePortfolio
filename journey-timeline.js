@@ -20,8 +20,7 @@ export function createJourneyTimeline(section) {
   const nodes = [...chart.children];
   let previousCount = -1;
   return {
-    update(scroll, introStart, colourFade, loaded, handoff = 0) {
-      const start = introStart + 1.35;
+    update(scroll, start, colourFade, loaded, handoff = 0) {
       const enter = THREE.MathUtils.clamp((scroll - start) / .4, 0, 1);
       // Clear the timeline before Skills, keeping reverse scroll reversible.
       const erase = Math.max(colourFade, handoff);
