@@ -37,7 +37,7 @@ body { background: var(--page-color); }
 #canvas-host canvas { display: block; width: 100%; height: 100%; }
 @media (max-width: 1024px) {
   #canvas-host { height: var(--scene-full-height, 100lvh); bottom: auto; }
-  #nebula, #starfield { height: var(--scene-full-height, 100lvh); bottom: auto; }
+  #nebula, #starfield { height: var(--scene-background-height, calc(100lvh + 64px)); bottom: auto; }
 }
 #purple-section { position: relative; z-index: 2; min-height: calc(var(--scene-unit, 1svh) * 220); background: #21192e; border-radius: 50% / 64px; }
 #nebula-return { position: relative; min-height: calc(var(--scene-unit, 1svh) * 100); }

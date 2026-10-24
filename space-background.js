@@ -17,6 +17,7 @@ function stabilizeMobileCanvases() {
     if (!mobile.matches) {
       root.style.removeProperty('--scene-unit');
       root.style.removeProperty('--scene-full-height');
+      root.style.removeProperty('--scene-background-height');
       previousWidth = -1;
       return;
     }
@@ -33,6 +34,9 @@ function stabilizeMobileCanvases() {
     probe.remove();
     root.style.setProperty('--scene-unit', `${full / 100}px`);
     root.style.setProperty('--scene-full-height', `${full}px`);
+    // Some mobile browsers measure lvh before their toolbars finish collapsing.
+    // Give only the background a full-screen overscan; never alter scene timing.
+    root.style.setProperty('--scene-background-height', `${Math.max(full, screen.height) + 64}px`);
   }
   window.addEventListener('resize', update, { passive: true });
   screen.orientation?.addEventListener('change', update);
@@ -479,5 +483,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     },
   };
   activeBackground = api;
+  // Background coverage is independent of the model host's fixed dimensions.
+  new ResizeObserver(() => api.resize()).observe(nebulaCanvas);
   return api;
 }
