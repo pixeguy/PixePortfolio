@@ -8,6 +8,12 @@ GitHub Actions checks out the pushed commit and uploads it directly to
 `/home/customer/www/jermainetai.work/public_html/` over SSH on port 18765.
 The server's `~/PortfolioSitegroundSource` clone is not used by this workflow.
 
+Before uploading, `tools/prepare-deploy.py` creates a temporary runtime copy and
+adds `?v=<commit SHA>` to root CSS/JS references in HTML and local JavaScript
+imports. Each release requests a matching set of scripts and styles, avoiding
+old cached code when HTML has already updated. Local development files retain
+their ordinary URLs. The preparation step needs only Python's standard library.
+
 ## One-time setup
 
 Open the GitHub repository's **Settings → Secrets and variables → Actions**.

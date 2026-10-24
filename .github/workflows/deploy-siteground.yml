@@ -23,6 +23,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Prepare versioned website files
+        run: python3 tools/prepare-deploy.py --output "$RUNNER_TEMP/siteground-public" --version "$GITHUB_SHA"
+
       - name: Deploy website files
         shell: bash
         env:
@@ -64,4 +67,4 @@ jobs:
             --include='/*.js' \
             --include='/assets/***' \
             --exclude='*' \
-            ./ "$SG_USER@$SG_HOST:/home/customer/www/jermainetai.work/public_html/"
+            "$RUNNER_TEMP/siteground-public/" "$SG_USER@$SG_HOST:/home/customer/www/jermainetai.work/public_html/"
