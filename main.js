@@ -32,11 +32,6 @@ document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 
 document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
 const fightingContent = document.querySelector('#fighting-content');
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
-let introHeight = 0;
-new ResizeObserver(entries => {
-  const height = entries[0].contentRect.height;
-  if (height > 0) introHeight = height;
-}).observe(fightingContent);
 function prepareTypingText(element) {
   const accessibleCopy = element.cloneNode(true);
   accessibleCopy.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
@@ -72,12 +67,11 @@ function updateFightingText(scroll) {
   const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
   const introScroll = scroll - idleStart;
   const typed = THREE.MathUtils.clamp(introScroll / INTRO_SCROLL.typeDuration, 0, 1);
-  // Keep the layout still while typing, then move only the composited transform.
-  // Measure the actual text height so long paragraphs clear even on narrow screens.
+  // Like the timeline, stay fixed throughout touch scrolling. Moving fixed text
+  // in the WebGL loop can lag behind the browser's native scrolling compositor.
   const exitProgress = THREE.MathUtils.clamp(
     (introScroll - INTRO_SCROLL.holdUntil) / INTRO_SCROLL.exitDuration, 0, 1);
-  const exitDistance = host.clientHeight * .5 + introHeight * .5 + 32;
-  fightingContent.style.transform = `translateY(calc(-50% - ${exitProgress * exitDistance}px))`;
+  fightingContent.style.opacity = String(1 - exitProgress);
   const count = Math.floor(fightingText.length * typed);
   fightingContent.hidden = !loadingScreen.hidden || introScroll < 0 || exitProgress >= 1;
   const colourFade = getForegroundPaletteProgress(getHeroPaletteProgress(scroll));
@@ -85,6 +79,10 @@ function updateFightingText(scroll) {
   journeyTimeline.update(scroll, idleStart + timelineStart, colourFade, loadingScreen.hidden, timelineExit);
   const skillsReveal = THREE.MathUtils.clamp((scroll - idleStart - SKILLS_SCROLL.start) / SKILLS_SCROLL.revealDuration, 0, 1);
   const skillsProgress = Math.min(skillsReveal, 1 - colourFade);
+  const skillsReading = loadingScreen.hidden && mobileLayout.matches
+    && introScroll >= SKILLS_SCROLL.start - .3
+    && scroll < fightExitStart;
+  document.body.classList.toggle('mobile-reading-skills', skillsReading);
   skillsSection.hidden = !loadingScreen.hidden || skillsProgress <= 0;
   skillsSection.style.opacity = String(Math.min(1, skillsProgress * 4));
   const skillsCount = Math.floor(skillsText.length * skillsProgress);

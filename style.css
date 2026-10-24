@@ -102,9 +102,14 @@ body { background: var(--page-color); }
   #fighting-content h2 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
   #fighting-content p { font-size: .9rem; }
   .journey-timeline { left: 5%; width: 60%; }
+  .journey-timeline ol { padding-left: 1.5rem; }
+  .journey-timeline li { padding-left: .75rem; }
+  .journey-timeline li::before { left: -1.45rem; }
+  .journey-timeline li::after { left: -.7rem; width: 1.15rem; }
   #skills-section { left: 5%; width: 85%; }
   #skills-section h3 { font-size: 1.65rem; margin-bottom: 1.25rem; }
   .skills-groups > div { gap: .85rem; padding: .85rem 0; }
+  body.mobile-reading-skills #canvas-host { opacity: 0; }
 }
 .page-content-hidden #fighting-section { opacity: 0; }
 .is-project-view #fighting-section { visibility: hidden; }
