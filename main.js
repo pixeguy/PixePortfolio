@@ -28,8 +28,8 @@ function getHeroPaletteProgress(scroll) {
   return THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(
     (scroll - fightExitStart) / (FIGHT_SCROLL.exitDuration + HERO_SCROLL.duration), 0, 1), 0, 1);
 }
-document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 100}svh`;
-document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
+document.querySelector('#fighting-section').style.top = `calc(${FIGHT_SCROLL.start * 100} * var(--scene-unit, 1svh))`;
+document.querySelector('#fighting-section').style.height = `calc(${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100} * var(--scene-unit, 1svh))`;
 const fightingContent = document.querySelector('#fighting-content');
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
 function prepareTypingText(element) {
@@ -97,10 +97,10 @@ for (const id of ['fighting-section', 'portfolio', 'purple-section']) oneTimeTex
 // Screen heights of scrolling for the model's move and turn in the purple section.
 const SECTION_SCROLL = { duration: 1, turnDegrees: 65, startBeforeTop: 0.7, exitDuration: 1 };
 const purpleSection = document.querySelector('#purple-section');
-purpleSection.style.minHeight = `${(SECTION_SCROLL.duration + 1) * 100}svh`;
-document.querySelector('#nebula-return').style.minHeight = `${(SECTION_SCROLL.exitDuration + .2) * 100}svh`;
+purpleSection.style.minHeight = `calc(${(SECTION_SCROLL.duration + 1) * 100} * var(--scene-unit, 1svh))`;
+document.querySelector('#nebula-return').style.minHeight = `calc(${(SECTION_SCROLL.exitDuration + .2) * 100} * var(--scene-unit, 1svh))`;
 // Reveal the tabs halfway down the screen after the model finishes sitting.
-document.documentElement.style.setProperty('--project-start', `${(HERO_SCROLL.start + HERO_SCROLL.duration + .5) * 100}svh`);
+document.documentElement.style.setProperty('--project-start', `calc(${(HERO_SCROLL.start + HERO_SCROLL.duration + .5) * 100} * var(--scene-unit, 1svh))`);
 const loadingScreen = document.querySelector('#loading-screen');
 const loadingProgress = document.querySelectorAll('.loader-monogram-fill');
 const loadingStartedAt = performance.now();

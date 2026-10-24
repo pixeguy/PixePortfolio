@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSceneHeight } from './space-background.js';
 
 // Scroll distances in viewport heights; each clip gets a share based on its duration.
 export const PURPLE_SEQUENCE = { entrySpace: 4, exitLead: .85, jogTransitionSpace: .585, contactSpace: 1.2, poseBlend: .65, typeInterval: .08, eraseInterval: .045 };
@@ -21,11 +22,11 @@ export function createPurpleSequence(fbx, mixer, section) {
   const exitSpace = (PURPLE_SEQUENCE.entrySpace - .5) / sequenceDuration(entering)
     * (actions['Sit To Stand'].getClip().duration + 2 * PURPLE_SEQUENCE.poseBlend);
   const stage = section.querySelector('.section-gallery-stage');
-  stage.style.paddingTop = `${(.5 + (PURPLE_SEQUENCE.entrySpace - .5) * revealProgress) * 100}svh`;
+  stage.style.paddingTop = `calc(${(.5 + (PURPLE_SEQUENCE.entrySpace - .5) * revealProgress) * 100} * var(--scene-unit, 1svh))`;
   const bottomSpace = .3;
-  stage.style.paddingBottom = `${bottomSpace * 100}svh`;
+  stage.style.paddingBottom = `calc(${bottomSpace * 100} * var(--scene-unit, 1svh))`;
   // Allow the standing and jogging transitions to finish in the next section.
-  document.querySelector('#nebula-return').style.minHeight = `${(exitSpace - bottomSpace + PURPLE_SEQUENCE.jogTransitionSpace + PURPLE_SEQUENCE.contactSpace + 1) * 100}svh`;
+  document.querySelector('#nebula-return').style.minHeight = `calc(${(exitSpace - bottomSpace + PURPLE_SEQUENCE.jogTransitionSpace + PURPLE_SEQUENCE.contactSpace + 1) * 100} * var(--scene-unit, 1svh))`;
   const contact = document.querySelector('#contact-heading');
   const contactText = contact.firstElementChild;
   const contactContent = 'Contact me';
@@ -126,10 +127,10 @@ export function createPurpleSequence(fbx, mixer, section) {
   }
 
   return {
-    get active() { return section.getBoundingClientRect().top <= window.innerHeight * .5; },
+    get active() { return section.getBoundingClientRect().top <= getSceneHeight() * .5; },
     get liftFactor() { return liftFactor; },
     update(delta) {
-      const height = window.innerHeight;
+      const height = getSceneHeight();
       const bounds = section.getBoundingClientRect();
       const galleryBounds = gallery.getBoundingClientRect();
       const entry = THREE.MathUtils.clamp((height * .5 - bounds.top) / ((PURPLE_SEQUENCE.entrySpace - .5) * height), 0, 1);
