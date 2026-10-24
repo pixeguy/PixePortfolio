@@ -73,6 +73,15 @@ body { background: var(--page-color); }
 #fighting-section { position: absolute; left: 0; width: 100%; z-index: 2; pointer-events: none; transition: opacity 450ms ease; }
 #fighting-content { position: fixed; top: 50svh; left: 8%; width: 40%; max-width: 38rem; transform: translateY(-50%); color: var(--accent-color); overflow-anchor: none; }
 #fighting-content[hidden] { display: none; }
+.intro-native-scroll {
+  animation: intro-scroll-exit linear both;
+  animation-timeline: scroll(root block);
+  animation-range: var(--intro-exit-start) var(--intro-exit-end);
+}
+@keyframes intro-scroll-exit {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(calc(-100% - 50svh - 2rem)); }
+}
 #fighting-content h2 { margin: 0 0 1.5rem; font: 700 clamp(2.5rem, 4.5vw, 5rem)/1.05 Arial, Helvetica, sans-serif; letter-spacing: -.04em; }
 #fighting-content p { margin: 0; font: 400 clamp(1rem, 1.3vw, 1.35rem)/1.6 Arial, Helvetica, sans-serif; }
 .journey-timeline { position: fixed; top: 24svh; left: 8%; margin: 0; width: 54%; color: var(--accent-color); }
@@ -109,7 +118,6 @@ body { background: var(--page-color); }
   #skills-section { left: 5%; width: 85%; }
   #skills-section h3 { font-size: 1.65rem; margin-bottom: 1.25rem; }
   .skills-groups > div { gap: .85rem; padding: .85rem 0; }
-  body.mobile-reading-skills #canvas-host { opacity: 0; }
 }
 .page-content-hidden #fighting-section { opacity: 0; }
 .is-project-view #fighting-section { visibility: hidden; }

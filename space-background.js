@@ -37,6 +37,8 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   let starfieldWidth = 0;
   let starfieldHeight = 0;
   let paletteProgress = 0;
+  let backgroundWidth = 0, backgroundHeight = 0, backgroundRatio = 0;
+  let nebulaWidth = 0, nebulaHeight = 0;
   const goldenColors = [[175, 130, 55], [191, 155, 64], [230, 193, 89], [146, 107, 53]];
   function mixColor(source, target) {
     return source.map((value, index) => Math.round(math.lerp(value, target[index], paletteProgress))).join(',');
@@ -44,7 +46,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
 
   function resizeNebula() {
     const width = host.clientWidth;
-    const height = host.clientHeight;
+    const height = nebulaCanvas.clientHeight;
     if (!width || !height) return;
 
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -52,6 +54,21 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     nebulaCanvas.height = Math.round(height * pixelRatio);
     nebulaContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     const minDimension = Math.min(width, height);
+    if (nebulaBlobs.length && nebulaWidth && nebulaHeight) {
+      const radiusScale = minDimension / Math.min(nebulaWidth, nebulaHeight);
+      for (const blob of nebulaBlobs) {
+        blob.x *= width / nebulaWidth;
+        blob.y *= height / nebulaHeight;
+        blob.radiusX *= radiusScale;
+        blob.radiusY *= radiusScale;
+      }
+      nebulaWidth = width;
+      nebulaHeight = height;
+      linkNebulaBlobs();
+      return;
+    }
+    nebulaWidth = width;
+    nebulaHeight = height;
     const colors = ['108,78,151', '86,62,130', '127,83,151', '65,70,131'];
     const blobCount = Math.ceil(Math.max(7, Math.floor((width * height) / 80000)) / 2);
     nebulaBlobs = Array.from({ length: blobCount }, () => ({
@@ -276,7 +293,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   let cachedClouds = [], cloudTime = -1;
   function drawNebula(time, context = nebulaContext) {
     const width = host.clientWidth;
-    const height = host.clientHeight;
+    const height = nebulaCanvas.clientHeight;
     context.clearRect(0, 0, width, height);
     if (cloudTime !== time) {
     const shapes = nebulaBlobs.map(blob => nebulaShape(blob, time));
@@ -323,15 +340,24 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
 
   function resizeStarfield() {
     const width = host.clientWidth;
-    const height = host.clientHeight;
+    const height = nebulaCanvas.clientHeight;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     if (!width || !height) return;
 
+    const oldWidth = starfieldWidth, oldHeight = starfieldHeight;
     starfieldWidth = width;
     starfieldHeight = height;
     starCanvas.width = Math.round(width * pixelRatio);
     starCanvas.height = Math.round(height * pixelRatio);
     starContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    if (stars.length && oldWidth && oldHeight) {
+      for (const star of stars) {
+        star.x *= width / oldWidth;
+        star.y *= height / oldHeight;
+      }
+      return;
+    }
 
     const starCount = Math.max(48, Math.floor((width * height) / 11000));
     stars = Array.from({ length: starCount }, () => ({
@@ -368,7 +394,14 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   const alternateStars = document.createElement('canvas');
   let alternateTime = -Infinity;
   const api = {
-    resize() { resizeNebula(); resizeStarfield(); cloudTime = -1; alternateTime = -Infinity; },
+    resize() {
+      const width = host.clientWidth, height = nebulaCanvas.clientHeight;
+      const ratio = window.devicePixelRatio || 1;
+      if (!width || !height || (width === backgroundWidth && height === backgroundHeight && ratio === backgroundRatio)) return;
+      backgroundWidth = width; backgroundHeight = height; backgroundRatio = ratio;
+      resizeNebula(); resizeStarfield(); cloudTime = -1; alternateTime = -Infinity;
+      nebulaLastDraw = -Infinity;
+    },
     drawRegion(context, bounds, time) {
       if (time - alternateTime >= 33) {
         if (alternateClouds.width !== nebulaCanvas.width || alternateClouds.height !== nebulaCanvas.height) {
@@ -378,8 +411,8 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
           alternateStars.width = starCanvas.width; alternateStars.height = starCanvas.height;
         }
         const cloudContext = alternateClouds.getContext('2d'), starsContext = alternateStars.getContext('2d');
-        cloudContext.setTransform(nebulaCanvas.width / host.clientWidth, 0, 0, nebulaCanvas.height / host.clientHeight, 0, 0);
-        starsContext.setTransform(starCanvas.width / host.clientWidth, 0, 0, starCanvas.height / host.clientHeight, 0, 0);
+        cloudContext.setTransform(nebulaCanvas.width / backgroundWidth, 0, 0, nebulaCanvas.height / backgroundHeight, 0, 0);
+        starsContext.setTransform(starCanvas.width / backgroundWidth, 0, 0, starCanvas.height / backgroundHeight, 0, 0);
         const previousPalette = paletteProgress;
         paletteProgress = 0;
         // Use the last main-cloud pose: both palettes share exactly one contour.
@@ -392,7 +425,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
       context.fillStyle = '#030306'; context.fillRect(0, 0, bounds.width, bounds.height);
       const origin = host.getBoundingClientRect();
       for (const canvas of [alternateClouds, alternateStars]) {
-        const ratioX = canvas.width / host.clientWidth, ratioY = canvas.height / host.clientHeight;
+        const ratioX = canvas.width / backgroundWidth, ratioY = canvas.height / backgroundHeight;
         context.drawImage(canvas, (bounds.left - origin.left) * ratioX, (bounds.top - origin.top) * ratioY,
           bounds.width * ratioX, bounds.height * ratioY, 0, 0, bounds.width, bounds.height);
       }

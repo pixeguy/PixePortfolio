@@ -31,6 +31,12 @@ function getHeroPaletteProgress(scroll) {
 document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 100}svh`;
 document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
 const fightingContent = document.querySelector('#fighting-content');
+const nativeIntroScroll = CSS.supports('animation-timeline', 'scroll(root block)')
+  && CSS.supports('animation-range', '0px 1px');
+fightingContent.classList.toggle('intro-native-scroll', nativeIntroScroll);
+const introExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + INTRO_SCROLL.holdUntil;
+fightingContent.style.setProperty('--intro-exit-start', `${introExitStart * 100}svh`);
+fightingContent.style.setProperty('--intro-exit-end', `${(introExitStart + INTRO_SCROLL.exitDuration) * 100}svh`);
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
 function prepareTypingText(element) {
   const accessibleCopy = element.cloneNode(true);
@@ -67,11 +73,11 @@ function updateFightingText(scroll) {
   const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
   const introScroll = scroll - idleStart;
   const typed = THREE.MathUtils.clamp(introScroll / INTRO_SCROLL.typeDuration, 0, 1);
-  // Like the timeline, stay fixed throughout touch scrolling. Moving fixed text
-  // in the WebGL loop can lag behind the browser's native scrolling compositor.
+  // Native CSS owns the upward exit where supported. Older browsers keep the
+  // stable fixed-position fade rather than moving text in the WebGL loop.
   const exitProgress = THREE.MathUtils.clamp(
     (introScroll - INTRO_SCROLL.holdUntil) / INTRO_SCROLL.exitDuration, 0, 1);
-  fightingContent.style.opacity = String(1 - exitProgress);
+  if (!nativeIntroScroll) fightingContent.style.opacity = String(1 - exitProgress);
   const count = Math.floor(fightingText.length * typed);
   fightingContent.hidden = !loadingScreen.hidden || introScroll < 0 || exitProgress >= 1;
   const colourFade = getForegroundPaletteProgress(getHeroPaletteProgress(scroll));
@@ -79,10 +85,6 @@ function updateFightingText(scroll) {
   journeyTimeline.update(scroll, idleStart + timelineStart, colourFade, loadingScreen.hidden, timelineExit);
   const skillsReveal = THREE.MathUtils.clamp((scroll - idleStart - SKILLS_SCROLL.start) / SKILLS_SCROLL.revealDuration, 0, 1);
   const skillsProgress = Math.min(skillsReveal, 1 - colourFade);
-  const skillsReading = loadingScreen.hidden && mobileLayout.matches
-    && introScroll >= SKILLS_SCROLL.start - .3
-    && scroll < fightExitStart;
-  document.body.classList.toggle('mobile-reading-skills', skillsReading);
   skillsSection.hidden = !loadingScreen.hidden || skillsProgress <= 0;
   skillsSection.style.opacity = String(Math.min(1, skillsProgress * 4));
   const skillsCount = Math.floor(skillsText.length * skillsProgress);
@@ -660,10 +662,14 @@ new FBXLoader().load(
   (error) => showError('Could not load the character FBX. Start the site with Start Viewer.cmd and check assets/portfolio-character.fbx.', error),
 );
 
+let renderedWidth = 0, renderedHeight = 0;
 function resize() {
   const width = host.clientWidth;
   const height = host.clientHeight;
   if (!width || !height) return;
+  if (width === renderedWidth && height === renderedHeight) return;
+  renderedWidth = width;
+  renderedHeight = height;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
