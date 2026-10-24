@@ -61,6 +61,12 @@ function prepareTypingText(element) {
 const fightingText = [...fightingContent.querySelectorAll('.fighting-intro h2, .fighting-intro p')].flatMap(prepareTypingText);
 const skillsSection = document.querySelector('#skills-section');
 const skillsText = [...skillsSection.querySelectorAll('h3, dt, li')].flatMap(prepareTypingText);
+const skillSeparators = skillsText.filter(letter => letter.textContent === ',');
+function updateSkillSeparators() {
+  for (const separator of skillSeparators) separator.textContent = mobileLayout.matches ? ' ·' : ',';
+}
+mobileLayout.addEventListener('change', updateSkillSeparators);
+updateSkillSeparators();
 let skillsTextCount = -1;
 let fightingTextCount = -1;
 function updateFightingText(scroll) {
