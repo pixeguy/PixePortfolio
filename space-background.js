@@ -2,6 +2,42 @@ export const NEBULA_MOTION = { flowRate: 0.000035, minimumSpeed: 3, speedVariati
 let activeBackground = null;
 export function getSpaceBackground() { return activeBackground; }
 
+let viewportInitialized = false;
+function stabilizeMobileCanvases() {
+  if (viewportInitialized) return;
+  viewportInitialized = true;
+  const mobile = window.matchMedia('(max-width: 1024px) and (pointer: coarse)');
+  let previousWidth = -1, previousOrientation = null;
+  function update() {
+    const root = document.documentElement;
+    if (!mobile.matches) {
+      root.style.removeProperty('--scene-small-height');
+      root.style.removeProperty('--scene-full-height');
+      previousWidth = -1;
+      return;
+    }
+    const width = root.clientWidth;
+    const orientation = screen.orientation?.type ?? '';
+    // Toolbar and keyboard height changes must not reallocate the canvases.
+    if (width === previousWidth && orientation === previousOrientation) return;
+    previousWidth = width;
+    previousOrientation = orientation;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;width:0;height:100svh;';
+    document.body.append(probe);
+    const small = probe.getBoundingClientRect().height || window.innerHeight;
+    probe.style.height = '100lvh';
+    const full = probe.getBoundingClientRect().height || small;
+    probe.remove();
+    root.style.setProperty('--scene-small-height', `${small}px`);
+    root.style.setProperty('--scene-full-height', `${full}px`);
+  }
+  window.addEventListener('resize', update, { passive: true });
+  screen.orientation?.addEventListener('change', update);
+  mobile.addEventListener('change', update);
+  update();
+}
+
 const math = {
   lerp: (a, b, t) => a + (b - a) * t,
   clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
@@ -28,6 +64,7 @@ export function nebulaNoise(x, y) {
 
 // Shared by the portfolio and each project page; no model dependency.
 export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
+  stabilizeMobileCanvases();
   const nebulaContext = nebulaCanvas.getContext('2d');
   const starContext = starCanvas.getContext('2d');
   let stars = [];

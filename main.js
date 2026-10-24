@@ -31,12 +31,6 @@ function getHeroPaletteProgress(scroll) {
 document.querySelector('#fighting-section').style.top = `${FIGHT_SCROLL.start * 100}svh`;
 document.querySelector('#fighting-section').style.height = `${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100}svh`;
 const fightingContent = document.querySelector('#fighting-content');
-const nativeIntroScroll = CSS.supports('animation-timeline', 'scroll(root block)')
-  && CSS.supports('animation-range', '0px 1px');
-fightingContent.classList.toggle('intro-native-scroll', nativeIntroScroll);
-const introExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + INTRO_SCROLL.holdUntil;
-fightingContent.style.setProperty('--intro-exit-start', `${introExitStart * 100}svh`);
-fightingContent.style.setProperty('--intro-exit-end', `${(introExitStart + INTRO_SCROLL.exitDuration) * 100}svh`);
 const journeyTimeline = createJourneyTimeline(document.querySelector('.journey-timeline'));
 function prepareTypingText(element) {
   const accessibleCopy = element.cloneNode(true);
@@ -73,11 +67,10 @@ function updateFightingText(scroll) {
   const idleStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration;
   const introScroll = scroll - idleStart;
   const typed = THREE.MathUtils.clamp(introScroll / INTRO_SCROLL.typeDuration, 0, 1);
-  // Native CSS owns the upward exit where supported. Older browsers keep the
-  // stable fixed-position fade rather than moving text in the WebGL loop.
+  // Keep the paragraph stationary and fade it on every platform.
   const exitProgress = THREE.MathUtils.clamp(
     (introScroll - INTRO_SCROLL.holdUntil) / INTRO_SCROLL.exitDuration, 0, 1);
-  if (!nativeIntroScroll) fightingContent.style.opacity = String(1 - exitProgress);
+  fightingContent.style.opacity = String(1 - exitProgress);
   const count = Math.floor(fightingText.length * typed);
   fightingContent.hidden = !loadingScreen.hidden || introScroll < 0 || exitProgress >= 1;
   const colourFade = getForegroundPaletteProgress(getHeroPaletteProgress(scroll));
