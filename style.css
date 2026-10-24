@@ -118,6 +118,9 @@ body { background: var(--page-color); }
   .skills-groups dt { position: relative; justify-self: start; padding-bottom: .4rem; font-size: 1.1rem; }
   .skills-groups dt::after { content: ''; position: absolute; bottom: 0; left: 0; width: min(100%, 8rem); height: 1px; background: linear-gradient(to right, currentColor, transparent); }
   .skills-groups li { font-size: 1rem; }
+  .skills-groups .engine-skills { display: grid; grid-template-columns: max-content max-content; gap: 0 .45em; }
+  #section-transition-quote { left: auto; right: 4%; width: 54%; transform: translateY(-50%); text-align: right; font-size: clamp(1.6rem, 6vw, 2.5rem); }
+  #contact-heading { width: 84%; white-space: nowrap; font-size: clamp(2rem, 9vw, 3rem); }
 }
 .page-content-hidden #fighting-section { opacity: 0; }
 .is-project-view #fighting-section { visibility: hidden; }
@@ -200,6 +203,7 @@ html.is-navigating .cursor-blob { visibility: hidden; }
 #contact-heading[hidden] + .contact-social-links { display: none; }
 .contact-social-links a { display: flex; justify-content: space-between; align-items: center; padding: .65rem 0; border-bottom: 1px solid currentColor; color: var(--accent-color); text-decoration: none; font: 600 clamp(1.35rem, 3vw, 2.5rem)/1.2 Arial, Helvetica, sans-serif; transform-origin: left center; }
 .contact-social-links a:hover { transform: scale(1.05); }
+.contact-social-links svg { width: 1em; height: 1em; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 #hero-social-links a:focus-visible, .contact-social-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
 .name-letter { opacity: 0; }
 .name-letter.is-typed { opacity: 1; }
