@@ -1,0 +1,9 @@
+# Natural stone texture
+
+Generated with the built-in image generation tool, then copied into this project as `Rock_Albedo.png`. The texture is used in the stone materials, with color and tangent-space normal detail baked into the arena's dedicated maps. The terrain uses the same source as a repeating tile with derived normal and roughness maps.
+
+## Generation prompt
+
+Create a seamless tileable PBR albedo texture for natural fractured basalt and weathered slate rock in a dark charcoal and muted purple palette. This is a texture asset for an existing low-poly 3D cosmos arena. Square 2048x2048 or higher. Orthographic straight-on close view of solid rock surface filling every pixel. Dense complex geological structure at several scales: irregular overlapping stratified stone flakes, chipped edges, hairline cracks, deep narrow crevices, granular mineral pores, subtle dusty deposits, occasional subdued lavender mineral flecks. Natural anisotropic irregular geology, no evenly spaced polygon network, no paving stones, no cobblestones, no brickwork. Keep medium-scale detail distributed everywhere; do not put a large dominant crack or isolated boulder in the center. Matte dry material, flat diffuse illumination, no baked dramatic shadows, no directional light, no specular highlights, no glow, no perspective, no sky, no objects, no symbols, no words, no frame. All four borders should tile seamlessly with no visible edge or vignette. Colors should remain dark charcoal gray with restrained purple undertones, never bright saturated purple. Produce the texture itself, not a material ball or scene preview.
+
+The generated image returned at 1254 × 1254. It is repeated at a consistent physical scale rather than stretched over the scene. The generated texture is an artistic material source, not a measured scan or a true displacement dataset; relief normals are approximated from its tonal detail and combined with the supplied arena normals.
