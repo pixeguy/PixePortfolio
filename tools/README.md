@@ -1,5 +1,23 @@
 # Model authoring tools
 
+## Final front-page arena
+
+`prepare-arena-web.py` rebuilds `assets/poseidon-space-arena/arena.glb` from the
+packed canonical `arena.blend`. The editable reference character is 1.8 m tall;
+the GLB contains environment/lights only because the website stages its animated
+FBX at the same height. Only that GLB is included in prepared deployments.
+Earlier arena style scripts are historical recipes whose intermediate scenes
+were removed during cleanup; use the canonical scene for further edits.
+
+`animate-arena-elements.py` adds local tower-crack spill lights, movable grass
+and rock nodes with GLB motion metadata, and extra small debris. The website
+animates those nodes in `arena-hero.js`; no baked animation clip is required.
+
+`create-hero-lettering.py` converts the system Arial Bold font into eight
+extruded glyph meshes in `assets/hero-lettering.glb`. It uses
+`C:/Windows/Fonts/arialbd.ttf`; the font itself is not embedded. Social buttons
+are generated as solid geometry in `hero-lettering.js` from the existing SVGs.
+
 The website does not execute these Python scripts or load the FBXs in
 `assets/sources/`. Keep them for animation edits, repairs, and rebuilding exports.
 They require Blender's Python environment.
@@ -34,3 +52,16 @@ Example from the project folder:
 For deployment, omit `tools/` and `assets/sources/`. The site only needs the
 exported models and images directly inside `assets/`, alongside its HTML, CSS,
 and JavaScript files.
+
+`warm-arena-walkway.py` updates the canonical arena with inward-facing painted
+rail runes, rear rune stones/column accents/debris, and warm point lights. It
+preserves motion extras and exports `arena.glb` without rendering a preview.
+
+`clean-arena-light.py` is the subsequent refinement step: removes the rear rune
+blocks and dark ink cracks, repacks clean pigment textures, centers and packs
+the railing runes, and adds sharp emissive fissures with broad warm lighting.
+It updates the canonical blend and GLB while preserving motion extras.
+
+`deepen-arena-atmosphere.py` follows that step. It spaces 20 animated rocks
+into a higher canopy and adds sparse or branched emissive fractures plus soft
+lights to nine selected rear towers, preserving their purple vertex colours.

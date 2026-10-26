@@ -1,0 +1,41 @@
+{
+  "characterHeight": 1.8,
+  "previousCharacterHeight": 3.3,
+  "floorY": 0.058,
+  "characterZ": 0.170972,
+  "fogDensity": 0.003,
+  "runtimeModel": "arena.glb",
+  "runtimeCharacter": "../portfolio-character.fbx",
+  "sky": "transparent; existing star and purple cloud canvases",
+  "export": "environment and lights only; no duplicated static character",
+  "removedForegroundRock": "pCube7",
+  "disabledTextSideFissures": [
+    "pCylinder4.004",
+    "pCube2.004",
+    "pCube18"
+  ],
+  "addedDistantTowers": 0,
+  "runtimeCharacterAppearance": "outline only",
+  "foregroundCrackPillar": "pCylinder4.003",
+  "faintCrackTowers": [
+    "Atmosphere_Tower_01",
+    "Atmosphere_Tower_02",
+    "Atmosphere_Tower_03",
+    "Atmosphere_Tower_04",
+    "Atmosphere_Tower_05",
+    "Atmosphere_Tower_06",
+    "Atmosphere_Tower_07",
+    "Atmosphere_Tower_08",
+    "Atmosphere_Tower_09",
+    "Atmosphere_Tower_10",
+    "Atmosphere_Tower_11",
+    "Atmosphere_Tower_12",
+    "Atmosphere_Tower_13",
+    "Atmosphere_Tower_14"
+  ],
+  "towerCrackEmissionRelative": 0.035,
+  "towerCrackSpillLights": 14,
+  "animatedGrassClumps": 11,
+  "floatingRockCount": 28,
+  "motion": "slow bounded drift/tumble; anchored wind sway; respects reduced motion"
+}

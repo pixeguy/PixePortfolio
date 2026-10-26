@@ -11,6 +11,7 @@ $contentTypes = @{
   '.css'  = 'text/css; charset=utf-8'
   '.js'   = 'text/javascript; charset=utf-8'
   '.fbx'  = 'application/octet-stream'
+  '.glb'  = 'model/gltf-binary'
   '.png'  = 'image/png'
   '.jpg'  = 'image/jpeg'
   '.jpeg' = 'image/jpeg'

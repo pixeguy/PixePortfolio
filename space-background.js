@@ -338,6 +338,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     const width = host.clientWidth;
     const height = nebulaCanvas.clientHeight;
     context.clearRect(0, 0, width, height);
+    // A near-black sky wash stays well below the brightness of the clouds.
+    const sky=context.createLinearGradient(0,0,width*.3,height);
+    sky.addColorStop(0,'#04040b');sky.addColorStop(.52,'#0b0713');sky.addColorStop(1,'#03040b');
+    context.globalAlpha=1-paletteProgress;
+    context.fillStyle=sky;context.fillRect(0,0,width,height);
+    context.globalAlpha=1;
     if (cloudTime !== time) {
     const shapes = nebulaBlobs.map(blob => nebulaShape(blob, time));
     const paired = new Set();

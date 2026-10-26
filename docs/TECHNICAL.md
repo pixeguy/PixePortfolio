@@ -9,6 +9,8 @@ verification report. Values below are tuning defaults, not universal model sizes
 | --- | --- |
 | `index.html` | Home sections, loader SVG, gallery images, timeline, import map |
 | `main.js` | Home startup, FBX loading, render loop, scrolling, layout, projects, loader, name typing |
+| `arena-hero.js` | Opening environment, 1.8 m character, responsive framing, scroll camera route through both rings, transparent bloom and fog |
+| `hero-lettering.js` | Extruded title meshes, perspective button geometry, floating rotation and accessible DOM alignment |
 | `style.css` | Layout, layer order, theme variables, responsive rules, interactions |
 | `projects.js` | Ordered project metadata used by listings and previous/next links |
 | `project-page.js` | Runtime for a directly opened project HTML page |
@@ -33,6 +35,90 @@ independent animation loops for every feature: the home loop calls their update
 methods. Detail pages have their own loop only when opened directly.
 
 ## 2. Startup, loading, and the home render loop
+
+The opening also loads `assets/poseidon-space-arena/arena.glb`. Loading waits for
+both assets. `arena-hero.js` matches the legacy opening character's projected
+bounds with an opening camera at 0.22 m eye height, looking upward. Framing updates
+on resize. The animated FBX is temporarily staged at 1.8 m tall, then its parent
+and transforms are restored for the later scroll controllers. Its horizontal
+viewing angle is preserved. Pointer tilt does not affect the arena.
+
+HDR targets, bloom, soft local/sky lights and distance fog render the opening.
+`arena-sky.js` draws a complete star/cloud panorama onto an unlit inward-facing
+sphere. Its centre follows the camera, while its orientation remains fixed in
+world space: camera rotation reveals other longitudes, translation adds no
+parallax. Cloud and star atlases are baked once at 2048×1024 without mipmaps;
+small GPU UV deformations and shimmer animate them without Canvas repaint or
+texture uploads each frame. The hidden Canvas background pauses while the arena
+is opaque and resumes during its fade.
+The character outline uses environment depth occlusion.
+The character is excluded from the lit colour pass and does not cast a solid
+shadow: only its gold outline is composited. Runtime light strengths, floor
+albedo response, rune emission and bloom are calibrated below the raw GLB
+values. Linear fog starts at 7 units and reaches full density at 31, reducing
+distant towers to silhouettes. The Rune lighting panel controls fog start and
+fade distance as well as ring, railing, crack light intensity and light reach.
+Light defaults are 2/3/1/1; emission and bloom remain independent. Existing broad
+rear lights supply the blue-violet midtone, with their wash reduced 8% to restrain
+brightness. Reusing them avoids an additional area-light evaluation on every
+stone fragment. The two added opening towers were removed;
+original rear towers retain faint
+emission and local soft spill lights. Arena nodes with `arenaMotion` GLB extras
+are animated in the home loop: rocks drift/tumble slowly, while cloned grass
+materials bend their vertices increasingly toward the tip. Grass clump pivots
+remain on the ground and ring-side clumps lean away from the opening. Motion
+uses the existing frame timestamp and respects reduced-motion preferences.
+Rock/plant motion retains the selected values (2.2, 1.8, 2, 2.5, 1.35), with
+separate integrated clocks. The old motion panel has been removed. Hemisphere
+intensity is 0.38 with restrained blue overhead and violet rear fill.
+The opening framing remains unchanged.
+
+Foreground warmth uses two restrained amber lights whose ranges stop before
+the rear towers. Pink/rose imported fill is reduced, while rune and crack spill
+has more priority. Motion defaults remain unchanged. The name uses
+eight extruded glyph meshes from `assets/hero-lettering.glb`, with flat gold
+front faces, shaded cut sides and dark edges. Buttons use actual cylindrical
+bodies and raised tubular SVG icons. `hero-lettering.js` renders these in a
+orthographic foreground scene aligned to the existing DOM title/link boxes.
+The DOM stays accessible and clickable, drives typed-glyph visibility, and
+provides fallback content if the lettering asset fails to load. Slow bounded
+rotation/bobbing respects reduced motion. Default face rotations are zero and
+floating rotation is disabled. A shear on the extrusion reveals its shaded
+sides while the faces stay parallel to the screen, referencing Messenger's
+opening lettering. Depth sliders scale geometry before the shear.
+The temporary `3D name & buttons` panel in `hero-lettering.js` controls name
+turn/tilt/roll, depth, size, position, floating rotation/speed/height and button
+turn/tilt/depth/size/spacing/position. The actual link hit boxes follow button
+size, spacing and position. Reload/reset restores defaults.
+
+Upper walkway beams have twenty painted gold glyphs per inward-facing side,
+using `InnerRailRuneUV`; the previous emissive fissures are cleared from their
+atlas tiles. Six nearby point lights spill gold along the path. Both rings
+have broad warm light pools. The five small rune blocks are removed. Rear
+columns have sharp emissive fissures. Twenty floating rocks form a higher,
+widely spaced canopy; nine selected rear towers have varied sparse or branched
+fractures and accompanying soft lights.
+Dark painted cracks are removed from the pigment atlases. Fissures use dedicated
+1024px textures with cylindrical wrapping for columns/towers, rather than the
+original small projected atlas tiles. Ring materials exclude direct punctual
+lighting so only ambient shading and rune emission remain. Floating rocks
+receive a localized underside gold bounce and a cooler top-facing sky lift.
+The sky includes a very dark blue/plum gradient beneath the brighter clouds.
+`ARENA_JOURNEY` shares camera/content timing with `main.js`. From 0.15–1.15
+viewport heights, the off-axis opening view recentres and rises to the large
+ring's centre. It crosses that ring at scroll 2, follows the descending path,
+crosses the smaller ring at 4.25, then turns back toward the arena and stops at
+5.5, at a low eye height and farther from the ring. The paragraph starts
+typing only after arrival. The view stays stationary behind the paragraph;
+the arena fades at 7.35–8.1 into the later character/timeline content. Scrolling
+back reverses the same route. Stars and purple clouds remain the sky throughout.
+
+Rendering skips the hidden legacy outline pass while the arena is opaque and
+skips arena outline/depth passes after the character fades. Normal/depth-only
+outline renders do not refresh shadow maps; the lit scene still does. Add
+`?perf=1` to the home URL to show a local FPS and average CPU frame-time meter.
+It is hidden in ordinary visits. Wait until model loading finishes before
+comparing steady-state frame rates.
 
 `main.js` constructs the Three.js scene/renderer, Canvas 2D background, cursor
 blob, text controllers, and project navigation. FBXLoader loads

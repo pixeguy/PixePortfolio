@@ -10,6 +10,8 @@ import { createPurpleSequence } from './purple-sequence.js';
 import { createFightingSequence } from './fighting-sequence.js';
 import { createOneTimeText } from './one-time-text.js';
 import { createJourneyTimeline } from './journey-timeline.js';
+import { createArenaHero, ARENA_JOURNEY } from './arena-hero.js';
+import { createHeroLettering } from './hero-lettering.js';
 
 const host = document.querySelector('#canvas-host');
 // Match the existing narrow CSS layout; wider viewports retain desktop behavior.
@@ -19,7 +21,7 @@ const compactPortfolio = window.matchMedia('(max-width: 1024px)');
 const INTRO_SCROLL = { typeDuration: .35, holdUntil: .75, exitDuration: 1.1, timelineGap: .25 };
 const timelineStart = INTRO_SCROLL.holdUntil + INTRO_SCROLL.exitDuration + INTRO_SCROLL.timelineGap;
 const extraJourneySpace = timelineStart - 1.35;
-const FIGHT_SCROLL = { start: .85, enterDuration: 1.2, idleDuration: 4.4 + extraJourneySpace, exitDuration: 1.2 };
+const FIGHT_SCROLL = { start: ARENA_JOURNEY.end - 1.2, enterDuration: 1.2, idleDuration: 4.4 + extraJourneySpace, exitDuration: 1.2 };
 // Offsets from the start of Fighting Idle, measured in viewport heights.
 const SKILLS_SCROLL = { timelineExit: 2.5 + extraJourneySpace, start: 3 + extraJourneySpace, revealDuration: .45 };
 const fightExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration;
@@ -398,8 +400,17 @@ const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 5000);
 const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 host.appendChild(renderer.domElement);
 const modelEdges = createEdgeEffect(renderer);
+const heroLettering = createHeroLettering(renderer);
+const assetProgress = { character: 0, arena: 0 };
+const arenaHero = createArenaHero(renderer, modelEdges, progress => {
+  assetProgress.arena = progress;
+  setLoadingProgress((assetProgress.character * .7 + assetProgress.arena * .3) * 100);
+});
+arenaHero.ready.catch(error => showError('Could not load the arena. Check assets/poseidon-space-arena/arena.glb.', error));
 const modelGold = new THREE.Color('#dca85e');
 const modelViolet = new THREE.Color('#63435b');
 const modelColor = new THREE.Color();
@@ -592,7 +603,7 @@ function updateModelAnimation(delta) {
     ? THREE.MathUtils.clamp((window.scrollY - start) / distance, 0, 1) : 0;
   sittingProgress = progress;
   titleEraseProgress = loadingScreen.hidden
-    ? THREE.MathUtils.clamp((window.scrollY / viewportHeight - FIGHT_SCROLL.start) / FIGHT_SCROLL.enterDuration, 0, 1) : 0;
+    ? THREE.MathUtils.clamp((window.scrollY / viewportHeight - ARENA_JOURNEY.start) / .65, 0, 1) : 0;
   portfolioSection.classList.toggle('is-ready', progress >= 1);
   portfolioSection.inert = progress < 1 || document.body.classList.contains('is-project-view');
   updateTitleBackspace();
@@ -649,13 +660,18 @@ new FBXLoader().load(
     if (!initializeModelAnimation(fbx)) return;
     // Fit the model using the opening pose of its default animation.
     fitModel(fbx);
-    setLoadingProgress(100);
-    dismissLoadingScreen();
+    arenaHero.setCharacter(modelPlacement, modelMotion, camera);
+    assetProgress.character = 1;
+    arenaHero.ready.then(() => {
+      setLoadingProgress(100);
+      dismissLoadingScreen();
+    }).catch(() => {});
   },
   (event) => {
     if (event.total) {
       const percent = Math.round((event.loaded / event.total) * 100);
-      setLoadingProgress(percent);
+      assetProgress.character = percent / 100;
+      setLoadingProgress((assetProgress.character * .7 + assetProgress.arena * .3) * 100);
     }
   },
   (error) => showError('Could not load the character FBX. Start the site with Start Viewer.cmd and check assets/portfolio-character.fbx.', error),
@@ -674,6 +690,7 @@ function resize() {
   renderer.setSize(width, height, false);
   spaceBackground.resize();
   updateModelLayout();
+  arenaHero.resize(width, height);
 }
 
 new ResizeObserver(resize).observe(host);
@@ -740,10 +757,22 @@ renderer.setAnimationLoop(() => {
   const backgroundProgress = updateScrollPalette(paletteProgress);
   modelColor.copy(modelGold).lerp(modelViolet, getForegroundPaletteProgress(paletteProgress));
   modelEdges.setColors(modelColor, modelGold);
+  const projectView=document.body.classList.contains('is-project-view');
+  const arenaOpacity=projectView?0:arenaHero.opacity(window.scrollY/viewportHeight);
   spaceBackground.draw(time, backgroundProgress);
   cursorBlob.draw(time);
   projectNavigation.update(time);
   oneTimeText.update(time);
   animateProjectOutlines(time);
-  if (!document.body.classList.contains('is-project-view')) modelEdges.render(scene, camera);
+  if (!projectView) {
+    if(arenaOpacity<.999) {
+      modelEdges.setOpacity(1-arenaOpacity);
+      modelEdges.render(scene,camera);
+    } else {
+      renderer.setRenderTarget(null);renderer.clear();
+    }
+    arenaHero.render(arenaOpacity, time, window.scrollY / viewportHeight);
+    modelEdges.setOpacity(1);
+    heroLettering.render(time,host.clientWidth,host.clientHeight);
+  }
 });

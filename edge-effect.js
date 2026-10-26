@@ -9,6 +9,8 @@ export const EDGE_SETTINGS = {
 
 export function createEdgeEffect(renderer) {
   const normals = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  const occlusion = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, transparent: true,
+    blending: THREE.NoBlending, depthWrite: true, side: THREE.DoubleSide });
   const target = new THREE.WebGLRenderTarget(1, 1, {
     minFilter: THREE.NearestFilter,
     magFilter: THREE.NearestFilter,
@@ -26,6 +28,7 @@ export function createEdgeEffect(renderer) {
       pixelOffset: { value: new THREE.Vector2() },
       edgeThreshold: { value: EDGE_SETTINGS.threshold },
       blitThreshold: { value: 0 },
+      opacity: { value: 1 },
       outlineColor: { value: new THREE.Color(EDGE_SETTINGS.color) },
       boundaryEnabled: { value: 0 },
       boundaryTop: { value: 0 },
@@ -45,6 +48,7 @@ export function createEdgeEffect(renderer) {
       uniform vec2 pixelOffset;
       uniform float edgeThreshold;
       uniform float blitThreshold;
+      uniform float opacity;
       uniform vec3 outlineColor;
       uniform float boundaryEnabled;
       uniform float boundaryTop;
@@ -77,7 +81,7 @@ export function createEdgeEffect(renderer) {
         float screenY = 1.0 - vUv.y;
         float insideSection = boundaryEnabled * step(boundaryTop + curve, screenY)
           * step(screenY, boundaryBottom - curve);
-        gl_FragColor = vec4(mix(outlineColor, boundaryColor, insideSection), outline);
+        gl_FragColor = vec4(mix(outlineColor, boundaryColor, insideSection), outline * opacity);
         #include <colorspace_fragment>
       }
     `,
@@ -91,6 +95,9 @@ export function createEdgeEffect(renderer) {
   let colorOverride = null;
 
   return {
+    setOpacity(value) {
+      material.uniforms.opacity.value = value;
+    },
     setColors(outline = null, boundary = '#d4c444') {
       colorOverride = outline;
       material.uniforms.boundaryColor.value.set(boundary);
@@ -104,7 +111,7 @@ export function createEdgeEffect(renderer) {
       material.uniforms.boundaryBottom.value = bottom;
       material.uniforms.boundaryCurve.value = curve;
     },
-    render(scene, camera) {
+    render(scene, camera, { clear = true, occluderLayer = null, outlineLayer = null } = {}) {
       renderer.getDrawingBufferSize(bufferSize);
       if (target.width !== bufferSize.x || target.height !== bufferSize.y) {
         target.setSize(bufferSize.x, bufferSize.y);
@@ -116,26 +123,42 @@ export function createEdgeEffect(renderer) {
       const previousTarget = renderer.getRenderTarget();
       const previousMaterial = scene.overrideMaterial;
       const previousAlpha = renderer.getClearAlpha();
+      const previousAutoClear = renderer.autoClear;
+      const previousShadowUpdate=renderer.shadowMap.autoUpdate;
+      const previousLayers = camera.layers.mask;
       renderer.getClearColor(previousColor);
       try {
-        scene.overrideMaterial = normals;
         renderer.setClearColor(0x000000, 0);
         renderer.setRenderTarget(target);
         renderer.clear();
+        renderer.autoClear = false;
+        // Depth/normal-only passes do not consume lighting or its shadow maps.
+        renderer.shadowMap.autoUpdate=false;
+        if (occluderLayer !== null) {
+          camera.layers.set(occluderLayer);
+          scene.overrideMaterial = occlusion;
+          renderer.render(scene, camera);
+        }
+        if (outlineLayer !== null) camera.layers.set(outlineLayer);
+        scene.overrideMaterial = normals;
         renderer.render(scene, camera);
         scene.overrideMaterial = previousMaterial;
         renderer.setRenderTarget(previousTarget);
-        renderer.clear();
+        if (clear) renderer.clear();
         renderer.render(screen, screenCamera);
       } finally {
         scene.overrideMaterial = previousMaterial;
         renderer.setRenderTarget(previousTarget);
         renderer.setClearColor(previousColor, previousAlpha);
+        renderer.autoClear = previousAutoClear;
+        renderer.shadowMap.autoUpdate=previousShadowUpdate;
+        camera.layers.mask = previousLayers;
       }
     },
     destroy() {
       target.dispose();
       normals.dispose();
+      occlusion.dispose();
       material.dispose();
       geometry.dispose();
     },

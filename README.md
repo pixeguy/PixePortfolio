@@ -33,6 +33,18 @@ direct visits and refreshes work. No SPA rewrite to `index.html` is needed.
 excluded from deployment. The launch scripts are only for local development.
 The bundled front character is `assets/portfolio-character.fbx`.
 
+The opening arena is `assets/poseidon-space-arena/arena.glb`, loaded by
+`arena-hero.js`. Its fixed low camera preserves the previous character framing;
+`arena-sky.js` renders a spherical star/cloud sky that follows camera rotation
+and ignores translation. The shared Canvas background continues outside the
+arena. The editable scene and final maps are
+kept beside the GLB, and excluded by the deployment preparation script.
+
+`hero-lettering.js` displays the extruded name meshes in
+`assets/hero-lettering.glb` and volumetric social-button geometry. The original
+DOM title and links remain for responsive layout, typing, accessibility and
+click/keyboard targets.
+
 Runtime models and images live directly in `assets/`. Editable front-animation
 clips and Poseidon's body/tail inputs are grouped under `assets/sources/` and are
 used only by the offline authoring scripts. Obsolete exports and the unused Boss

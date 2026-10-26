@@ -19,7 +19,12 @@ def prepare(source, destination, version):
                     lambda match: f"{match[1]}{match[2]}?v={version}{match[1]}", content
                 )
             (destination / source_file.name).write_text(content, encoding="utf-8", newline="\n")
-    shutil.copytree(source / "assets", destination / "assets", ignore=shutil.ignore_patterns("sources"))
+    def ignore_authoring(directory, names):
+        folder = Path(directory)
+        if folder == source / "assets" / "poseidon-space-arena":
+            return [name for name in names if name != "arena.glb"]
+        return [name for name in names if name == "sources"]
+    shutil.copytree(source / "assets", destination / "assets", ignore=ignore_authoring)
     print(f"Prepared website release {version} in {destination}")
 
 
