@@ -35,15 +35,17 @@ The bundled front character is `assets/portfolio-character.fbx`.
 
 The opening arena is `assets/poseidon-space-arena/arena.glb`, loaded by
 `arena-hero.js`. Its fixed low camera preserves the previous character framing;
-`arena-sky.js` renders a spherical star/cloud sky that follows camera rotation
-and ignores translation. The shared Canvas background continues outside the
-arena. The editable scene and final maps are
+the existing Canvas clouds and stars follow camera orientation through
+`sky-projection.js`, ignoring translation. The opening uses the original
+pixel positions, sizes and animation timing. The editable scene and final maps are
 kept beside the GLB, and excluded by the deployment preparation script.
 
 `hero-lettering.js` displays the extruded name meshes in
 `assets/hero-lettering.glb` and volumetric social-button geometry. The original
-DOM title and links remain for responsive layout, typing, accessibility and
-click/keyboard targets.
+DOM title and links remain for responsive layout, accessibility and
+click/keyboard targets. The meshes live in the arena and turn slightly inward;
+their link hit boxes follow their projected positions. The open book and lectern
+are combined in `assets/book-lectern/book-lectern.glb` in the rear walkway.
 
 Runtime models and images live directly in `assets/`. Editable front-animation
 clips and Poseidon's body/tail inputs are grouped under `assets/sources/` and are

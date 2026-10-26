@@ -22,7 +22,9 @@ def prepare(source, destination, version):
     def ignore_authoring(directory, names):
         folder = Path(directory)
         if folder == source / "assets" / "poseidon-space-arena":
-            return [name for name in names if name != "arena.glb"]
+            return [name for name in names if name not in {"arena.glb", "sky-silhouettes.json"}]
+        if folder == source / "assets" / "book-lectern":
+            return [name for name in names if name != "book-lectern.glb"]
         return [name for name in names if name == "sources"]
     shutil.copytree(source / "assets", destination / "assets", ignore=ignore_authoring)
     print(f"Prepared website release {version} in {destination}")

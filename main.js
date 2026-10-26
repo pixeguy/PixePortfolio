@@ -10,8 +10,8 @@ import { createPurpleSequence } from './purple-sequence.js';
 import { createFightingSequence } from './fighting-sequence.js';
 import { createOneTimeText } from './one-time-text.js';
 import { createJourneyTimeline } from './journey-timeline.js';
-import { createArenaHero, ARENA_JOURNEY } from './arena-hero.js';
-import { createHeroLettering } from './hero-lettering.js';
+import { createArenaHero, ARENA_JOURNEY } from './arena-hero.js?v=20261027-ground-project-cut';
+import { createHeroLettering } from './hero-lettering.js?v=20261027-ground-project-cut';
 
 const host = document.querySelector('#canvas-host');
 // Match the existing narrow CSS layout; wider viewports retain desktop behavior.
@@ -21,14 +21,13 @@ const compactPortfolio = window.matchMedia('(max-width: 1024px)');
 const INTRO_SCROLL = { typeDuration: .35, holdUntil: .75, exitDuration: 1.1, timelineGap: .25 };
 const timelineStart = INTRO_SCROLL.holdUntil + INTRO_SCROLL.exitDuration + INTRO_SCROLL.timelineGap;
 const extraJourneySpace = timelineStart - 1.35;
-const FIGHT_SCROLL = { start: ARENA_JOURNEY.end - 1.2, enterDuration: 1.2, idleDuration: 4.4 + extraJourneySpace, exitDuration: 1.2 };
+const FIGHT_SCROLL = { start: ARENA_JOURNEY.end - 1.2, enterDuration: 1.2, idleDuration: ARENA_JOURNEY.groundStart-ARENA_JOURNEY.end, exitDuration: .3 };
 // Offsets from the start of Fighting Idle, measured in viewport heights.
 const SKILLS_SCROLL = { timelineExit: 2.5 + extraJourneySpace, start: 3 + extraJourneySpace, revealDuration: .45 };
 const fightExitStart = FIGHT_SCROLL.start + FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration;
-const HERO_SCROLL = { start: fightExitStart + FIGHT_SCROLL.exitDuration, duration: 2.2 };
+const HERO_SCROLL = { start: ARENA_JOURNEY.groundStart, duration: ARENA_JOURNEY.groundEnd-ARENA_JOURNEY.groundStart };
 function getHeroPaletteProgress(scroll) {
-  return THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(
-    (scroll - fightExitStart) / (FIGHT_SCROLL.exitDuration + HERO_SCROLL.duration), 0, 1), 0, 1);
+  return scroll>=ARENA_JOURNEY.groundReach?1:0;
 }
 document.querySelector('#fighting-section').style.top = `calc(${FIGHT_SCROLL.start * 100} * var(--scene-unit, 1svh))`;
 document.querySelector('#fighting-section').style.height = `calc(${(FIGHT_SCROLL.enterDuration + FIGHT_SCROLL.idleDuration) * 100} * var(--scene-unit, 1svh))`;
@@ -108,7 +107,7 @@ const purpleSection = document.querySelector('#purple-section');
 purpleSection.style.minHeight = `calc(${(SECTION_SCROLL.duration + 1) * 100} * var(--scene-unit, 1svh))`;
 document.querySelector('#nebula-return').style.minHeight = `calc(${(SECTION_SCROLL.exitDuration + .2) * 100} * var(--scene-unit, 1svh))`;
 // Reveal the tabs halfway down the screen after the model finishes sitting.
-document.documentElement.style.setProperty('--project-start', `calc(${(HERO_SCROLL.start + HERO_SCROLL.duration + .5) * 100} * var(--scene-unit, 1svh))`);
+document.documentElement.style.setProperty('--project-start', `calc(${ARENA_JOURNEY.groundEnd * 100} * var(--scene-unit, 1svh))`);
 const loadingScreen = document.querySelector('#loading-screen');
 const loadingProgress = document.querySelectorAll('.loader-monogram-fill');
 const loadingStartedAt = performance.now();
@@ -122,12 +121,7 @@ let modelMixer = null;
 let modelAnimation = null;
 let purpleSequence = null;
 let fightingSequence = null;
-let titleEraseProgress = 0;
 let sittingProgress = 0;
-let titleSequence = [];
-let titleTypedCount = 0;
-let titleVisibleCount = -1;
-let titleCaret = null;
 const portfolioSection = document.querySelector('#portfolio');
 const modelLiftAxis = new THREE.Vector3();
 const pointer = { x: 0, y: 0 };
@@ -410,6 +404,7 @@ const arenaHero = createArenaHero(renderer, modelEdges, progress => {
   assetProgress.arena = progress;
   setLoadingProgress((assetProgress.character * .7 + assetProgress.arena * .3) * 100);
 });
+heroLettering.attachWorld(arenaHero.letteringWorld());
 arenaHero.ready.catch(error => showError('Could not load the arena. Check assets/poseidon-space-arena/arena.glb.', error));
 const modelGold = new THREE.Color('#dca85e');
 const modelViolet = new THREE.Color('#63435b');
@@ -478,7 +473,7 @@ function dismissLoadingScreen() {
     const finish = () => {
       loadingScreen.hidden = true;
       document.documentElement.classList.remove('is-loading');
-      startTitleTypewriter();
+      initializeStaticTitle();
     };
     if (reducedMotion.matches) { finish(); return; }
     const wave = document.querySelector('#loading-wave-path');
@@ -504,59 +499,23 @@ function dismissLoadingScreen() {
   }, remaining);
 }
 
-function startTitleTypewriter() {
-  const words = [...document.querySelectorAll('.name-word')];
-  const characterDelay = 0.05;
-  const wordPause = 0.3;
-  const sequence = [];
-
-  words.forEach((word) => {
-    const letters = [...word.textContent];
-    word.replaceChildren();
-    for (const character of letters) {
-      const letter = document.createElement('span');
-      letter.className = 'name-letter';
-      letter.textContent = character;
-      word.append(letter);
-      sequence.push({ letter, word });
+function initializeStaticTitle() {
+  for(const word of document.querySelectorAll('.name-word')) {
+    const text=word.textContent;word.replaceChildren();
+    for(const character of text) {
+      const letter=document.createElement('span');letter.className='name-letter is-typed';
+      letter.textContent=character;word.append(letter);
     }
-  });
-
-  const caret = document.createElement('span');
-  caret.className = 'typing-caret';
-  caret.textContent = '|';
-  sequence[0]?.word.prepend(caret);
-  titleSequence = sequence;
-  titleCaret = caret;
-  document.querySelector('#name-backdrop').classList.add('is-typing');
-
-  let index = 0;
-  const typeNextCharacter = () => {
-    const next = sequence[index];
-    if (!next) return;
-
-    index += 1;
-    titleTypedCount = index;
-    updateTitleBackspace();
-
-    if (index < sequence.length) {
-      const changingWord = sequence[index].word !== next.word;
-      window.setTimeout(typeNextCharacter, changingWord ? wordPause * 1000 : characterDelay * 1000);
-    }
-  };
-  typeNextCharacter();
+  }
+  document.querySelector('#name-backdrop').classList.add('is-ready');
+  updateTitleVisibility();
 }
 
-function updateTitleBackspace() {
-  if (!titleSequence.length) return;
-  titleCaret.hidden = titleEraseProgress >= 1;
-  const count = Math.min(titleTypedCount, Math.floor(titleSequence.length * (1 - titleEraseProgress)));
-  document.querySelector('#hero-social-links').hidden = count < titleSequence.length;
-  if (count === titleVisibleCount) return;
-  titleVisibleCount = count;
-  titleSequence.forEach(({ letter }, index) => letter.classList.toggle('is-typed', index < count));
-  if (count) titleSequence[count - 1].letter.after(titleCaret);
-  else titleSequence[0].word.prepend(titleCaret);
+function updateTitleVisibility() {
+  const name=document.querySelector('#name-backdrop');
+  name.dataset.heroOpacity='1';
+  name.style.opacity='1';
+  document.querySelector('#hero-social-links').hidden=false;
 }
 
 function setLoadingProgress(progress) {
@@ -602,11 +561,10 @@ function updateModelAnimation(delta) {
   const progress = loadingScreen.hidden
     ? THREE.MathUtils.clamp((window.scrollY - start) / distance, 0, 1) : 0;
   sittingProgress = progress;
-  titleEraseProgress = loadingScreen.hidden
-    ? THREE.MathUtils.clamp((window.scrollY / viewportHeight - ARENA_JOURNEY.start) / .65, 0, 1) : 0;
-  portfolioSection.classList.toggle('is-ready', progress >= 1);
-  portfolioSection.inert = progress < 1 || document.body.classList.contains('is-project-view');
-  updateTitleBackspace();
+  const projectsReady=window.scrollY/viewportHeight>=ARENA_JOURNEY.groundReach;
+  portfolioSection.classList.toggle('is-ready', projectsReady);
+  portfolioSection.inert = !projectsReady || document.body.classList.contains('is-project-view');
+  updateTitleVisibility();
   const modelScroll = window.scrollY / viewportHeight;
   updateFightingText(modelScroll);
   if (purpleSequence?.active) return;
@@ -714,6 +672,19 @@ renderer.setAnimationLoop(() => {
     purpleSequence.update(delta);
   }
   const viewportHeight = Math.max(host.clientHeight, 1);
+  const groundScroll=window.scrollY/viewportHeight;
+  const groundCut=THREE.MathUtils.clamp((groundScroll-ARENA_JOURNEY.groundReach)/(ARENA_JOURNEY.groundEnd-ARENA_JOURNEY.groundReach),0,1);
+  const groundWiping=groundCut>0&&groundCut<1&&!document.body.classList.contains('is-project-view');
+  document.documentElement.classList.toggle('ground-projects',groundScroll>=ARENA_JOURNEY.groundReach);
+  // A hard, slightly slanted boundary reveals Projects from below only after
+  // the camera touches the floor. No crossfade between the two sections.
+  const left=THREE.MathUtils.clamp(1-groundCut*1.12,0,1)*viewportHeight;
+  const right=THREE.MathUtils.clamp(1.12-groundCut*1.12,0,1)*viewportHeight;
+  const skyClip=groundWiping?`polygon(0 0,100% 0,100% ${right}px,0 ${left}px)`:'';
+  for(const surface of [host,document.querySelector('#nebula'),document.querySelector('#starfield')])surface.style.clipPath=skyClip;
+  const projectHold=(groundScroll-ARENA_JOURNEY.groundEnd)*viewportHeight;
+  portfolioSection.style.clipPath=groundWiping?`polygon(0 ${window.scrollY+left-projectHold}px,100% ${window.scrollY+right-projectHold}px,100% 100%,0 100%)`:'';
+  portfolioSection.style.transform=groundWiping?`translateY(${projectHold}px)`:'';
   const sectionBounds = purpleSection.getBoundingClientRect();
   const sectionTop = sectionBounds.top;
   const entranceProgress = THREE.MathUtils.smoothstep(
@@ -759,7 +730,7 @@ renderer.setAnimationLoop(() => {
   modelEdges.setColors(modelColor, modelGold);
   const projectView=document.body.classList.contains('is-project-view');
   const arenaOpacity=projectView?0:arenaHero.opacity(window.scrollY/viewportHeight);
-  spaceBackground.draw(time, backgroundProgress);
+  document.documentElement.classList.toggle('arena-world-copy',arenaOpacity>.01);
   cursorBlob.draw(time);
   projectNavigation.update(time);
   oneTimeText.update(time);
@@ -771,8 +742,12 @@ renderer.setAnimationLoop(() => {
     } else {
       renderer.setRenderTarget(null);renderer.clear();
     }
+    arenaHero.prepareCamera(window.scrollY/viewportHeight);
+    heroLettering.render(time,host.clientWidth,host.clientHeight);
     arenaHero.render(arenaOpacity, time, window.scrollY / viewportHeight);
     modelEdges.setOpacity(1);
-    heroLettering.render(time,host.clientWidth,host.clientHeight);
   }
+  const skyView=arenaHero.backgroundView();
+  spaceBackground.setCameraOrientation(skyView?.camera,skyView?.reference,arenaOpacity,skyView?.skyRegions);
+  spaceBackground.draw(time,groundScroll<ARENA_JOURNEY.groundEnd?0:backgroundProgress);
 });

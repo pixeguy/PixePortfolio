@@ -9,6 +9,14 @@ export const EDGE_SETTINGS = {
 
 export function createEdgeEffect(renderer) {
   const normals = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  const revealHeight={value:1e6};
+  normals.onBeforeCompile=shader=>{
+    shader.uniforms.revealHeight=revealHeight;
+    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 revealWorld;')
+      .replace('#include <project_vertex>','#include <project_vertex>\nrevealWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader=('varying vec3 revealWorld; uniform float revealHeight;\n'+shader.fragmentShader)
+      .replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(revealWorld.y + .018*sin(revealWorld.x*91.0)*sin(revealWorld.z*83.0)>revealHeight) discard;');
+  };
   const occlusion = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0, transparent: true,
     blending: THREE.NoBlending, depthWrite: true, side: THREE.DoubleSide });
   const target = new THREE.WebGLRenderTarget(1, 1, {
@@ -95,6 +103,7 @@ export function createEdgeEffect(renderer) {
   let colorOverride = null;
 
   return {
+    setRevealHeight(value=1e6) { revealHeight.value=value; },
     setOpacity(value) {
       material.uniforms.opacity.value = value;
     },

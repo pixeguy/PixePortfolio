@@ -65,3 +65,14 @@ It updates the canonical blend and GLB while preserving motion extras.
 `deepen-arena-atmosphere.py` follows that step. It spaces 20 animated rocks
 into a higher canopy and adds sparse or branched emissive fractures plus soft
 lights to nine selected rear towers, preserving their purple vertex colours.
+
+`combine-book-lectern.py` combines the supplied lectern and open-book FBXs,
+seats the book on the lectern's measured sloped top, bakes transforms and joins
+the geometry into one mesh with two materials. It writes an editable blend,
+1024px packed textures, a runtime GLB and a preview in `tools/arena-work/`.
+
+`export-sky-silhouettes.py` reads the arena blend and exports per-tower bounds
+to `assets/poseidon-space-arena/sky-silhouettes.json` for soft sky attenuation.
+
+`arrange-reading-courtyard.py` moves the central broken pillar, attached plant
+and left fragment to the courtyard edges. Stored offsets make reruns idempotent.

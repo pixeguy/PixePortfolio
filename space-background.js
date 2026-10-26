@@ -1,3 +1,4 @@
+import { createSkyProjection } from './sky-projection.js?v=20261026-smooth-turn2';
 export const NEBULA_MOTION = { flowRate: 0.000035, minimumSpeed: 3, speedVariation: 0.25 };
 let activeBackground = null;
 export function getSpaceBackground() { return activeBackground; }
@@ -77,11 +78,15 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   let nebulaBlobs = [];
   let nebulaLinks = [];
   let nebulaLastDraw = -Infinity;
+  let nebulaPoseTime=0,paintedProjectionVersion=-1;
   let starfieldWidth = 0;
   let starfieldHeight = 0;
   let paletteProgress = 0;
   let backgroundWidth = 0, backgroundHeight = 0, backgroundRatio = 0;
   let nebulaWidth = 0, nebulaHeight = 0;
+  const projection=createSkyProjection();
+  let architectureRegions=null,architectureStrength=0;
+  let skyFields=[],skyStars=[],projectedClouds=[],projectedTime=-1,projectedVersion=-1;
   const goldenColors = [[175, 130, 55], [191, 155, 64], [230, 193, 89], [146, 107, 53]];
   function mixColor(source, target) {
     return source.map((value, index) => Math.round(math.lerp(value, target[index], paletteProgress))).join(',');
@@ -139,12 +144,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     return radius / Math.hypot(directionX / blob.radiusX, directionY / blob.radiusY);
   }
 
-  function linkNebulaBlobs() {
+  function linkNebulaBlobs(blobs=nebulaBlobs) {
     const candidates = [];
-    for (let a = 0; a < nebulaBlobs.length; a += 1) {
-      for (let b = a + 1; b < nebulaBlobs.length; b += 1) {
-        const first = nebulaBlobs[a];
-        const second = nebulaBlobs[b];
+    for (let a = 0; a < blobs.length; a += 1) {
+      for (let b = a + 1; b < blobs.length; b += 1) {
+        const first = blobs[a];
+        const second = blobs[b];
         const distance = Math.hypot(second.x - first.x, second.y - first.y);
         if (!distance) continue;
         const directionX = (second.x - first.x) / distance;
@@ -159,7 +164,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     }
     candidates.sort((first, second) => Math.abs(first.ratio - 1) - Math.abs(second.ratio - 1));
     const paired = new Set();
-    nebulaLinks = [];
+    const links=[];
     for (const candidate of candidates) {
       if (paired.has(candidate.a) || paired.has(candidate.b)) continue;
       paired.add(candidate.a);
@@ -170,10 +175,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
         phase: Math.random() * Math.PI * 2,
         speed: 0.8 + Math.random() * 0.4,
       };
-      nebulaLinks.push(link);
-      nebulaBlobs[link.a].link = { link, sign: 1 };
-      nebulaBlobs[link.b].link = { link, sign: -1 };
+      links.push(link);
+      blobs[link.a].link = { link, sign: 1 };
+      blobs[link.b].link = { link, sign: -1 };
     }
+    if(blobs===nebulaBlobs)nebulaLinks=links;
+    return links;
   }
 
   function nebulaConnection(link, time) {
@@ -262,7 +269,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     return Math.hypot(dx,dy)-math.lerp(surface.radii[first],surface.radii[(first+1)%surface.radii.length],index-first);
   }
 
-  function mergedNebulaPath(a,b,link) {
+  function mergedNebulaPath(a,b,link,contoursOut=null) {
     const surfaces = [nebulaSurface(a),nebulaSurface(b)];
     const points = [...a.points,...b.points];
     const blend = link.scale*0.32, padding = blend+12;
@@ -322,6 +329,7 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
         current = next;
       }
       if (contour.length<3) continue;
+      contoursOut?.push(contour);
       const first = contour[0], last = contour[contour.length-1];
       path.moveTo((first.x+last.x)/2,(first.y+last.y)/2);
       contour.forEach((point,index)=>{
@@ -334,17 +342,62 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   }
 
   let cachedClouds = [], cloudTime = -1;
+  function rebuildSkyFields() {
+    projection.resize(backgroundWidth,backgroundHeight);
+    skyFields=[{blobs:nebulaBlobs,links:nebulaLinks,face:0}];
+    for(let face=1;face<projection.orientations.length;face++) {
+      const blobs=nebulaBlobs.map(blob=>({...blob,link:undefined,
+        x:backgroundWidth*(.04+Math.random()*.92),y:backgroundHeight*(.04+Math.random()*.92),
+        phase:Math.random()*Math.PI*2,rotation:Math.random()*Math.PI*2,
+      })).filter(blob=>projection.outsideOpening(blob,face));
+      skyFields.push({blobs,links:linkNebulaBlobs(blobs),face});
+    }
+    skyStars=[];
+    for(let face=1;face<projection.orientations.length;face++) {
+      for(const star of stars) {
+        const next={...star,x:Math.random()*backgroundWidth,y:Math.random()*backgroundHeight,phase:Math.random()*Math.PI*2,face};
+        const p=projection.project(next.x,next.y,face,true);
+        if(!p||p.x<0||p.x>backgroundWidth||p.y<0||p.y>backgroundHeight)skyStars.push(next);
+      }
+    }
+    projectedTime=-1;projectedVersion=-1;
+  }
+  function skyClouds(time) {
+    if(projectedTime===time&&projectedVersion===projection.version)return projectedClouds;
+    const clouds=[];
+    for(const field of skyFields) {
+      if(!projection.fieldVisible(field.face))continue;
+      if(field.poseTime!==time) {
+        const shapes=field.blobs.map(blob=>nebulaShape(blob,time)),paired=new Set(),raw=[];
+        for(const link of field.links) {
+          const a=shapes[link.a],b=shapes[link.b];
+          paired.add(link.a);paired.add(link.b);
+          raw.push({a,b,link,contours:null,points:[...a.points,...b.points],blobs:[a.blob,b.blob]});
+        }
+        shapes.forEach((shape,i)=>{if(!paired.has(i))raw.push({contours:[shape.points],points:shape.points,blobs:[shape.blob]});});
+        field.rawClouds=raw;field.poseTime=time;
+      }
+      for(const cloud of field.rawClouds) {
+        if(!projection.visible(cloud.points,field.face))continue;
+        if(!cloud.contours) {
+          cloud.contours=[];mergedNebulaPath(cloud.a,cloud.b,cloud.link,cloud.contours);
+        }
+        const projected=projection.cloud(cloud,field.face);if(projected)clouds.push(projected);
+      }
+    }
+    projectedClouds=clouds;projectedTime=time;projectedVersion=projection.version;return clouds;
+  }
   function drawNebula(time, context = nebulaContext) {
     const width = host.clientWidth;
     const height = nebulaCanvas.clientHeight;
     context.clearRect(0, 0, width, height);
     // A near-black sky wash stays well below the brightness of the clouds.
-    const sky=context.createLinearGradient(0,0,width*.3,height);
+    const sky=context.createLinearGradient(0,projection.gradientY,width*.3,height+projection.gradientY);
     sky.addColorStop(0,'#04040b');sky.addColorStop(.52,'#0b0713');sky.addColorStop(1,'#03040b');
     context.globalAlpha=1-paletteProgress;
     context.fillStyle=sky;context.fillRect(0,0,width,height);
     context.globalAlpha=1;
-    if (cloudTime !== time) {
+    if (!projection.active && cloudTime !== time) {
     const shapes = nebulaBlobs.map(blob => nebulaShape(blob, time));
     const paired = new Set();
     const clouds = [];
@@ -359,10 +412,12 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     cachedClouds = clouds;
     cloudTime = time;
     }
-    for (const { path, blobs } of cachedClouds) {
+    const clouds=projection.active?skyClouds(time):cachedClouds;
+    for (const { path, blobs } of clouds) {
       // Shade the complete shared contour; there is no separate connector layer.
       for (const [index,blob] of blobs.entries()) {
-        const color = mixColor(blob.color.split(',').map(Number), goldenColors[nebulaBlobs.indexOf(blob) % goldenColors.length]);
+        const sourceIndex=nebulaBlobs.indexOf(blob);
+        const color = mixColor(blob.color.split(',').map(Number), goldenColors[(sourceIndex<0?index:sourceIndex) % goldenColors.length]);
         const x = blob.x;
         const y = blob.y;
         const gradient = context.createRadialGradient(
@@ -384,6 +439,20 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
         context.fill(path);
         context.restore();
       }
+    }
+    // Slightly attenuate clouds behind architecture with soft projected masks.
+    // Stars stay on their own canvas. No GPU readback or extra render pass.
+    if(context===nebulaContext&&architectureRegions&&architectureStrength>0) {
+      context.save();
+      for(const region of architectureRegions()) {
+        if(region.rx<3||region.ry<3)continue;
+        context.save();context.translate(region.x,region.y);context.scale(region.rx,region.ry);
+        const veil=context.createRadialGradient(0,0,.35,0,0,1);
+        veil.addColorStop(0,`rgba(6,5,14,${.09*architectureStrength})`);
+        veil.addColorStop(1,'rgba(6,5,14,0)');context.fillStyle=veil;
+        context.fillRect(-1,-1,2,2);context.restore();
+      }
+      context.restore();
     }
   }
 
@@ -422,10 +491,13 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
 
   function drawStarfield(time, context = starContext) {
     context.clearRect(0, 0, starfieldWidth, starfieldHeight);
-    for (const star of stars) {
+    const visibleStars=projection.active?[...stars,...skyStars]:stars;
+    for (const star of visibleStars) {
+      const point=projection.active?projection.project(star.x,star.y,star.face||0):star;
+      if(!point||point.x < -4||point.x>starfieldWidth+4||point.y < -4||point.y>starfieldHeight+4)continue;
       const shimmer = 0.35 + (0.65 * (0.5 + 0.5 * Math.sin(time * 0.001 * star.speed + star.phase)));
-      const x = Math.round(star.x);
-      const y = Math.round(star.y);
+      const x = Math.round(point.x);
+      const y = Math.round(point.y);
       context.globalAlpha = shimmer;
       const starRgb = [1, 3, 5].map(offset => parseInt(star.color.slice(offset, offset + 2), 16));
       context.fillStyle = `rgb(${mixColor(starRgb, [65, 45, 84])})`;
@@ -443,13 +515,19 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
   const alternateStars = document.createElement('canvas');
   let alternateTime = -Infinity;
   const api = {
+    setCameraOrientation(camera,reference,strength=1,regions=null) {
+      projection.setCamera(camera,reference,strength);
+      architectureRegions=regions;architectureStrength=strength;
+    },
     resize() {
       const width = host.clientWidth, height = nebulaCanvas.clientHeight;
       const ratio = window.devicePixelRatio || 1;
       if (!width || !height || (width === backgroundWidth && height === backgroundHeight && ratio === backgroundRatio)) return;
       backgroundWidth = width; backgroundHeight = height; backgroundRatio = ratio;
       resizeNebula(); resizeStarfield(); cloudTime = -1; alternateTime = -Infinity;
+      rebuildSkyFields();
       nebulaLastDraw = -Infinity;
+      paintedProjectionVersion=-1;
     },
     drawRegion(context, bounds, time) {
       if (time - alternateTime >= 33) {
@@ -481,9 +559,15 @@ export function createSpaceBackground(host, nebulaCanvas, starCanvas) {
     },
     draw(time, progress = 0) {
       paletteProgress = math.clamp(progress, 0, 1);
-      if (time - nebulaLastDraw >= 33) {
-        drawNebula(time);
+      const poseChanged=time-nebulaLastDraw>=33;
+      if(poseChanged) {
+        nebulaPoseTime=time;
         nebulaLastDraw = time;
+      }
+      // Keep the original morphing clock, but never throttle camera rotation.
+      // Reproject cached contours on every changed camera frame.
+      if(poseChanged||projection.version!==paintedProjectionVersion) {
+        drawNebula(nebulaPoseTime);paintedProjectionVersion=projection.version;
       }
       drawStarfield(time);
     },

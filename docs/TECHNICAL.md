@@ -8,7 +8,7 @@ verification report. Values below are tuning defaults, not universal model sizes
 | File | Responsibility |
 | --- | --- |
 | `index.html` | Home sections, loader SVG, gallery images, timeline, import map |
-| `main.js` | Home startup, FBX loading, render loop, scrolling, layout, projects, loader, name typing |
+| `main.js` | Home startup, FBX loading, render loop, scrolling, layout, projects, loader, static hero title |
 | `arena-hero.js` | Opening environment, 1.8 m character, responsive framing, scroll camera route through both rings, transparent bloom and fog |
 | `hero-lettering.js` | Extruded title meshes, perspective button geometry, floating rotation and accessible DOM alignment |
 | `style.css` | Layout, layer order, theme variables, responsive rules, interactions |
@@ -44,21 +44,31 @@ and transforms are restored for the later scroll controllers. Its horizontal
 viewing angle is preserved. Pointer tilt does not affect the arena.
 
 HDR targets, bloom, soft local/sky lights and distance fog render the opening.
-`arena-sky.js` draws a complete star/cloud panorama onto an unlit inward-facing
-sphere. Its centre follows the camera, while its orientation remains fixed in
-world space: camera rotation reveals other longitudes, translation adds no
-parallax. Cloud and star atlases are baked once at 2048×1024 without mipmaps;
-small GPU UV deformations and shimmer animate them without Canvas repaint or
-texture uploads each frame. The hidden Canvas background pauses while the arena
-is opaque and resumes during its fade.
+`space-background.js` retains the original moving clouds, linked contours,
+colours, radii, noise clock, star sizes and twinkle rates. `sky-projection.js`
+projects their control points as directions at infinity using only the arena
+camera quaternion relative to its opening pose. At the opening the projection
+is identity and the original Canvas drawing path runs unchanged. Other sky
+directions contain fields using the same cloud parameters. Offscreen clouds
+are culled before merging or painting. The same two viewport Canvas elements
+draw the sky; there is no second WebGL sky, panorama texture or repeated GPU
+texture upload. Cloud morphing retains its 33 ms clock, while cached world
+contours are reprojected and painted on every changed camera frame. Their
+expensive merge geometry is rebuilt only when the morph pose changes. Stars
+retain their frame loop. Translation has no effect. During the arena fade, orientation
+returns smoothly to the original background used by later sections.
 The character outline uses environment depth occlusion.
 The character is excluded from the lit colour pass and does not cast a solid
 shadow: only its gold outline is composited. Runtime light strengths, floor
 albedo response, rune emission and bloom are calibrated below the raw GLB
-values. Linear fog starts at 7 units and reaches full density at 31, reducing
-distant towers to silhouettes. The Rune lighting panel controls fog start and
-fade distance as well as ring, railing, crack light intensity and light reach.
-Light defaults are 2/3/1/1; emission and bloom remain independent. Existing broad
+values. Exponential distance haze starts at 7 units and reaches 63% of the fog colour
+after another 24 units. It approaches full haze gradually, preserving colour
+progression between tower depths instead of flattening everything past 31 units. Its colour is the brighter blue-violet #24263f.
+The Rune lighting panel exposes Fog strength (0–100% opacity), with Clear until
+and Fade over distances in a collapsed advanced section. The strength uniform
+scales the fog blend independently of range. It also controls ring, railing,
+crack light intensity and light reach.
+Light defaults are 2/170/1/1; emission and bloom remain independent. Existing broad
 rear lights supply the blue-violet midtone, with their wash reduced 8% to restrain
 brightness. Reusing them avoids an additional area-light evaluation on every
 stone fragment. The two added opening towers were removed;
@@ -78,18 +88,29 @@ the rear towers. Pink/rose imported fill is reduced, while rune and crack spill
 has more priority. Motion defaults remain unchanged. The name uses
 eight extruded glyph meshes from `assets/hero-lettering.glb`, with flat gold
 front faces, shaded cut sides and dark edges. Buttons use actual cylindrical
-bodies and raised tubular SVG icons. `hero-lettering.js` renders these in a
-orthographic foreground scene aligned to the existing DOM title/link boxes.
-The DOM stays accessible and clickable, drives typed-glyph visibility, and
-provides fallback content if the lettering asset fails to load. Slow bounded
-rotation/bobbing respects reduced motion. Default face rotations are zero and
-floating rotation is disabled. A shear on the extrusion reveals its shaded
-sides while the faces stay parallel to the screen, referencing Messenger's
-opening lettering. Depth sliders scale geometry before the shear.
+bodies and raised tubular SVG icons. `hero-lettering.js` attaches these meshes
+to the arena scene, deriving a fixed world anchor from the opening camera and
+responsive DOM layout. Name and button defaults are Y=34°, X=-4°, Z=0°, depth/size=1, X=50px, Y=0px. Their
+extrusion is genuine geometry without the former display shear. They use arena
+depth, fog and lighting, and move in perspective as the camera travels. The DOM
+provides static glyph layout and whole-title scroll fading, retains keyboard links and provides asset-failure
+fallback. Button hit boxes follow their projected world positions. Slow bounded
+X/Y rocking respects reduced motion: ±2° X / ±3° Y over roughly 60/79 seconds.
+There is no vertical bobbing or animated Z rotation.
+DOM layout metrics are cached until viewport, link visibility or layout sliders
+change, avoiding forced browser layout on every world-render frame.
 The temporary `3D name & buttons` panel in `hero-lettering.js` controls name
 turn/tilt/roll, depth, size, position, floating rotation/speed/height and button
 turn/tilt/depth/size/spacing/position. The actual link hit boxes follow button
 size, spacing and position. Reload/reset restores defaults.
+
+`assets/book-lectern/book-lectern.glb` combines the supplied FBXs into one mesh
+with two materials, 1024px book textures and vertex-coloured violet stone.
+The actual book-cover underside is aligned with the sloped top, with a 0.5 mm
+authoring clearance checked during export. `tools/combine-book-lectern.py` keeps an editable blend and rebuilds the GLB.
+The grounded prop is centred at (0, -0.501884, -17.4), scaled 1.25 with zero yaw (reversed 180 degrees from its previous pose), turned
+toward the final camera, on the far side of the smaller ring. The camera stops before the lectern, continuing to face deeper into the ruins. Portal light
+falls off locally: warmer by the rings, cooler toward the camera.
 
 Upper walkway beams have twenty painted gold glyphs per inward-facing side,
 using `InnerRailRuneUV`; the previous emissive fissures are cleared from their
@@ -107,18 +128,18 @@ The sky includes a very dark blue/plum gradient beneath the brighter clouds.
 `ARENA_JOURNEY` shares camera/content timing with `main.js`. From 0.15–1.15
 viewport heights, the off-axis opening view recentres and rises to the large
 ring's centre. It crosses that ring at scroll 2, follows the descending path,
-crosses the smaller ring at 4.25, then turns back toward the arena and stops at
-5.5, at a low eye height and farther from the ring. The paragraph starts
+crosses the smaller ring at 4.25, then continues forward and stops at
+5.5, at (-0.75, 1.35, -15.3), angled toward the central lectern. A temporary independently
+cloned skeleton plays Standing on the right; responsive framing matches the
+opening character bounds with a little extra margin; it stands on the clear right
+side as a guide. It uses the same gold outline treatment without fill. The paragraph starts
 typing only after arrival. The view stays stationary behind the paragraph;
 the arena fades at 7.35–8.1 into the later character/timeline content. Scrolling
 back reverses the same route. Stars and purple clouds remain the sky throughout.
 
 Rendering skips the hidden legacy outline pass while the arena is opaque and
 skips arena outline/depth passes after the character fades. Normal/depth-only
-outline renders do not refresh shadow maps; the lit scene still does. Add
-`?perf=1` to the home URL to show a local FPS and average CPU frame-time meter.
-It is hidden in ordinary visits. Wait until model loading finishes before
-comparing steady-state frame rates.
+outline renders do not refresh shadow maps; the lit scene still does.
 
 `main.js` constructs the Three.js scene/renderer, Canvas 2D background, cursor
 blob, text controllers, and project navigation. FBXLoader loads
@@ -218,8 +239,8 @@ last image bottom approaches the heading, rather than at the section's end.
 
 There are intentionally several text controllers with different behavior:
 
-- Name: starts after loading; 0.05 seconds per character and 0.3 seconds between
-  words. Scroll later backspaces it during fighting entry.
+- Name: appears fully after loading as extruded meshes, with no caret or typing.
+  Scrolling fades the complete title and buttons together.
 - Fighting intro: scroll-scrubbed letters reserve their final layout using opacity.
   It types over .35 viewport, stays pinned with .75 viewport of accumulated scroll,
   then moves upward. It does not forward-backspace on exit.
@@ -480,7 +501,7 @@ sits at 48svh. Hero social links have 44px circular borders on every viewport,
 with a small glyph-alignment inset from the name's left edge.
 The introductory typewriter wraps individual text nodes while retaining inline
 HTML such as `<b>`, `<strong>`, and `<br>`. The whole intro uses `translateY(-50%)`
-around a 50svh centre while typing/holding, then scrolls upward using the existing
+around a 50svh centre while visible, then scrolls upward using the existing
 hold timing. Its full formatted height is reserved while letters are hidden.
 Hero buttons scale to 1.15 on hover, while contact text links scale to 1.05 from
 their left edge; pressing scales them down. Game links use `.project-game-link`
@@ -492,8 +513,8 @@ itself as the anchor; its hit area extends to the outline bounds, so activating
 the blob's padding navigates just like activating the title, image, or description.
 
 `index.html` contains inline SVG itch.io/YouTube links beneath the hero name and
-larger text links below Contact me. Hero links appear when the name finishes typing
-and hide as it backspaces; contact links follow the heading's visibility. Both use
+larger text links below Contact me. Hero links appear with the complete name
+and fade with it on scroll; contact links follow the heading's visibility. Both use
 the existing foreground palette and are included in the home containers made inert
 during project navigation. Their URLs are edited directly in `index.html`.
 
@@ -569,3 +590,124 @@ the same layout and interactions from `photo-fan.js`.
   is a development convenience, not a production application server.
 - Asset helpers should be cleaned during authoring; increasing viewer space does
   not correct malformed animation or bad skin weights.
+
+The default fog strength is 55%, including Reset lights and reload. Haze colour
+progresses from plum #30243e through blue-violet #24263f to lavender #535471
+with distance. Three local orange portal bounce lights warm the far courtyard;
+they use the Ring light and Light reach controls without changing emission.
+
+Canvas clouds are subtly dimmed behind projected tower/rock bounds, using soft
+9% radial veils (stars remain separate). `sky-silhouettes.json` stores per-tower
+world bounds extracted by `tools/export-sky-silhouettes.py`; the towers otherwise
+share one render mesh. Bounds are projected only when clouds repaint; no GPU
+readback, new canvas, or additional WebGL scene render is used.
+
+The title and social buttons expose independent X/Y/Z rotation sliders, each
+covering -180 to +180 degrees (a full turn). The book export retains only
+Book_frame and Book_sheets, removing the key, quill and other loose ornaments.
+
+The introduction is a single transparent CanvasTexture plane above the book,
+not extruded letters or a screen overlay. Heading/body text is rasterized once
+from the accessible DOM copy, with standard perspective and depth occlusion.
+The camera travels sideways and rises after the small ring to show the book
+at an angle. The text plane and lectern share the courtyard centre line x=0.
+The DOM introduction stays accessible but is visually hidden while the arena
+plane is active; the existing later content flow is retained.
+
+The reading-court framing keeps the lectern at (0, -0.501884, -17.4), with
+the plane directly above it and the guide on the right at x=1.15. The arrival
+camera is (-0.75, 1.35, -15.3); it rises and approaches obliquely so the book top
+is visible. `arrange-reading-courtyard.py` moves BROKEN_PILLAR_1 and its plant
+3 units right, and pCylinder19 2 units left, clearing the central reading area.
+The local warm light pools follow this part of the courtyard.
+
+The left beam and its small supporting columns shift outward 0.8 units;
+Arena_Grass_005 follows the relocated right-hand broken pillar by 3 units.
+This keeps the world text unobstructed while retaining architecture at the edges.
+
+Book-focused arrival: lectern scale 1.25 at (0,-0.501884,-17.4), with the guide
+beside it at x=1.15,z=-17.7 (its feet remain on the floor). The final camera is
+(-0.75,1.35,-15.3); a view offset places the book near 32% width / 80% height,
+allowing the guide and stand to crop naturally. The text plane is 1.35 units
+wide and starts at y=0.94 above the enlarged book.
+
+Each title glyph has a centred pivot and its own sway phase/frequency. Default
+sway speed is 5 (range 0–10); the reference base rotations remain 34/-4/0.
+Button hover/focus animates a separate visual pivot through 360 degrees around
+X in 720ms, ending at 112% scale. Pointer leave/blur reverses it smoothly from
+its current progress. Projected link hit boxes use the non-flipping base group.
+Reduced motion retains only the enlargement. Railing light defaults to 6x and
+its slider now spans 0–20x, independently of rune emission.
+
+Current reading-rune pass: railing multiplier 170 (slider 0–300), fog 55%.
+Title/button faces remain opaque while travelling; they are hidden at the end
+of the title interval, without alpha blending through the architecture. Button
+flips use a 420ms damped spring response with a small overshoot and reverse
+from their current progress. Reduced-motion enlargement remains 150ms.
+
+Lectern scale is 1.05; arrival camera y=0.78, looking slightly upward. The guide
+is 12% larger and shifted to x=1.3,z=-17.55. The painted floor circle contains
+24 angular glyphs, on one HDR CanvasTexture plane with three warm point lights.
+The ring retains soft indirect warmth on its reverse side, with an extra faint
+rear point light. The small courtyard rock groups pCube4.001/pCube5.001 move
+2.5 units left, preserving their materials and shape.
+
+Ring balance refinement: added stone bounce and rear-side light are halved;
+actual ring-group lights blend 8% toward warm ivory. Emissive rune maps,
+emission intensities and bloom are unchanged. The lectern rune plane is now
+1.9 units wide with 16 marks (previously 2.7 units / 24); its three light
+sources move inward to radius 0.45 and range 2.2. The guide shifts to x=1.58.
+Button flips take 680ms, using a normalized critically damped spring response
+(omega 4.5) instead of the earlier abrupt 420ms oscillating response.
+
+
+### Scroll-driven character particles
+Railing illumination defaults to 16×. `character-particles.js` renders 1,800 seeded, varied-size particles in one draw call. The opening normal-outline pass clips progressively from head to feet at scroll 0.15–1.15; particles follow animated mesh vertices into turbulent strands ahead of the camera. At 4.25–5.3 they gather onto the second animated model while its outline reveals from feet upward. Scroll reversal reverses the transition; idle turbulence continues while paused. Mesh skinning samples are skipped during the fully dissolved travel interval. The shared edge effect resets its height clipping after the arena pass.
+
+Particle appearance refinement: larger faceted sprites follow a narrow curved tube with a shared animated spine and local turbulence. Independent seeded bronze/gold/ivory shades and brightness keep most grains matte while 17% cross the existing bloom threshold. Particle count remains 1,800 in one draw call.
+
+The particle flight now uses a low world-space route through the large aperture at scroll 1.2 and the small aperture at 3.5, ahead of the camera. A rounded leading head tapers over a 1.2-unit tail; restrained time-based curls deform its profile. Pigments use saturated yellow/gold to match the outline and rune palette, retaining independent matte and emissive grains.
+
+The fireball refinement increases the shared geometry to 2,800 grains, with a 2.6-unit travelling tail and a slower width falloff. Its route bows 0.82 units to the right between ring planes, returning to x=0 at the second aperture. Each grain has signed rotation, independent bounded oscillations, and a stable longitudinal sample without modulo resets. An additive halo pass shares the geometry and renders only emissive grains, giving visible soft glow without changing arena-wide bloom.
+
+Gather/launch staging: the opening outline dissolves completely by scroll 0.8, and the particles hold a compact 0.225-unit-radius sphere until 1.02 before stretching into flight. Initial camera alignment begins at 0.8; the particle head crosses the first ring at 1.65 ahead of the camera at 2.0. Geometry now contains 3,800 grains, with 86% biased toward a tight radial core, reduced jitter, and a smaller surface population. The post-second-ring route bends toward the destination character immediately, keeping the trail oblique to the view instead of following the lens axis.
+
+Name persistence and camera follow: the title and buttons retain full visibility/opacity in their world location throughout scrolling; scroll-driven title erasure is removed. The ball stretches fully into a stream by scroll 1.4, its head crosses the first ring at 1.65, and its tail clears before camera alignment begins at 2.05. The camera aligns at 2.25 and crosses the first ring at 2.9; the second-ring and final-arrival timings remain 4.25 and 5.5.
+
+Camera/ball synchronisation refinement: restored the earlier first-ring camera crossing at scroll 2.0. The ball and camera both begin moving at 1.02 after the initial gather/hold; camera alignment finishes at 1.35 as the ball begins stretching into the stream (1.35–1.85). The camera no longer waits for the first-ring crossing. Full title opacity remains enabled.
+
+Camera start correction: the opening camera stays fixed until scroll 1.65, when the particle head reaches the first ring. Alignment then uses quintic smootherstep over 0.95 viewport heights, ending at 2.6 (rather than the previous 0.33 interval). The camera crosses the first ring at 3.2. Particle animation, title persistence, second-ring timing, and final arrival retain their existing settings.
+
+Adaptive launch shape: camera and ball now share PARTICLE_LAUNCH_SCROLL (1.02). Initial ball travel eases in, and the sphere starts morphing immediately into a short 0.65-unit teardrop, completing that initial morph at 1.2. It then stretches to 2.6 units and narrows from 0.235 to 0.155 radius by 2.25. Camera alignment retains its gentle end at 2.6 with quintic easing; first-ring crossing remains 3.2.
+
+Close first-ring follow: camera alignment again happens early (1.02–1.3), and the first-ring camera crossing is 1.8, just behind the particle head at 1.65. The approach adds a smooth negative-x sweep, peaking around 0.48 units left within the wide first-ring opening, then blending into the existing right bend along the pathway. The second-ring and arrival timings retain their existing values.
+
+The close first-ring pass also follows the left approach by up to 0.42 units and briefly pitches downward by 0.18 radians, then returns to the centre line and normal view by scroll 2.6. This keeps the below-camera stream visible during the near first-person crossing.
+
+Centred, gentler follow: initial alignment now finishes at 1.5 and the first-ring crossing is 2.1, extending the approach from 0.78 to 1.08 viewport heights. The camera remains at x=0 through the ring and walkway rather than tracking the left-sweeping particles. The independent particle route is preserved. Particle core bias is increased to 90%, body width reduced slightly, and jitter reduced for a denser silhouette without additional particles or draw calls.
+
+Gradual lateral/vertical centering: X/Y position, camera rotation, and framing offsets now settle independently of forward movement, over scroll 1.02–1.98, just before the first-ring crossing at 2.1. The brief downward pitch pulse is removed. Forward timing is preserved. Particle geometry increases to 4,800 grains with slightly narrower body and reduced jitter/depth turbulence; per-grain halo opacity is adjusted to keep overall glow similar.
+
+Prelaunch camera composition: during scroll 0.15–0.9 the camera moves to (0, 1.5, 1.45), faces the first ring centre, and looks slightly downward with the gathered ball near the lower edge. It holds there until PARTICLE_LAUNCH_SCROLL (1.02), then starts forward travel as the ball launches. The view levels gradually before the centred first-ring crossing at 2.1. Particle route, density, and shape settings are unchanged.
+
+Letter interaction and particle head start: opening camera reframing now holds its original Z, then forward travel begins half a viewport after the ball launches (scroll 1.52); first-ring crossing is 2.6. Name sway defaults to 3×. Each glyph has a stable box hit proxy and a separate visual group: entry performs a small damped scale bounce, exit chooses X/Y flip direction from the nearest projected edge and uses the button-style 680ms damped response. Visual transformations never modify the hit proxy. Reduced-motion mode suppresses bounce/flip.
+
+Close staging correction: the prelaunch camera again settles at (0,1.5,1.45), matching the approved close ring/foreground-ball composition. That position is held from scroll 0.9 through 1.52, allowing the ball to launch at 1.02 and move for half a viewport before camera follow begins. Letter hover behavior and 3× sway are retained.
+
+Morph/frontier correction: the sphere and teardrop now share longitudinal and circular sample coordinates, avoiding transverse collapse while blending. Animated surface samples supply a single world-space reveal height to both particles and the outline. Particle release/gather uses the same 0.018-amplitude world-space noise as the outline and only transitions on its erased side, replacing the previous mismatched normalised-height bands. Camera catch-up crosses the first ring at 2.2 with a front-loaded forward interpolation whose exit speed closely matches the walkway segment; the close staging view and half-viewport head start are retained.
+
+During surface transitions, the gathering/incoming cloud is kept above the shared cut height by 0.27 units. This prevents already-released grains from being pulled down inside still-visible chest geometry and makes both transitions follow the visible outline edge.
+
+Low reformation stream and book hologram: only the outgoing dissolve raises its gathering cloud above the outline. The arriving stream retains its original low Y route; individual grains interpolate upward onto the shared model reveal boundary. A single transparent triangle projects from the book to the text’s outer upper corners, with a yellow fill strongest near the central source and fading outward/upward. Analytic antialiased V edges retain higher opacity throughout. It fades with the content plane and renders behind the text.
+
+The projection apex is anchored at world (0,0.58,-17.39), within the open book’s parchment/binding bounds rather than floating above the pages.
+
+Arrival sphere and projection correction: from scroll 4.25 to 5.05 the remaining stream continuously contracts into its spherical layout while the shared model frontier keeps consuming grains through 5.3. The cloud stays on the low flight route, with its X anchored to the destination path. The book V now ends just below the text’s lower corners instead of extending behind the paragraph. The content plane is raised 0.16 units to provide projection space; the source stays anchored on the open book and the existing centre fade/stronger edge treatment is retained.
+
+Book hologram activation: the world-space copy now types at 95 characters per second on reaching the content view, updating its canvas only when the character count changes. Its shader discards the transparent background and renders visible glyphs at full opacity without fog or an entrance fade. Both text and beam briefly offset horizontal UV bands during a 0.85-second activation glitch, retaining the golden palette. The projection uses a padded quad with soft analytical V sides and a height fade to remove hard triangle boundaries. Scrolling back below the arrival threshold resets activation for the next entrance.
+
+Shader Graph hologram replacement: typing and the earlier UV-offset effect are removed. The supplied graph is represented by a shared GLSL value-noise implementation (three Simple Noise octaves), Y-position noise at scale 716 remapped to -1..1, a time-seeded Random Range multiplied into X vertex displacement, and fine scale-500 noise added to colour through a Step gate driven by remapped sine and random values. The text and projection are subdivided vertically to support vertex displacement. Both share world-height noise bands, time, and a reversible 0.7-second presence transition. Band discard provides glitch-in/out without fading glyph opacity; exiting above or below the content range reverses the transition. Full copy is rasterized once and stays opaque between transitions. The golden projection's soft spatial fade remains.
+
+Hologram controls and content handoff: seven sliders control displacement amplitude, band scale, fine-noise scale, flicker speed, refresh rate, noise brightness, and transition duration; reset restores defaults, including the latest 0.25-second transition. Introduction, career timeline, and skills are separate opaque textured world planes sharing the graph shader. The current page glitches out before the next glitches in, while the beam stays on between pages. Content occupies scroll 5.5–7.325 (half the previous 3.65 viewport heights), with timeline at 6.1 and skills at 6.7. The courtyard character blends from Standing to looping Fighting Idle after reforming.
+
+Ground-to-Projects cut: after content, scroll 7.325–8.075 lowers and tilts the camera toward the floor. Its near plane stays above the single-sided surface to avoid exposing the underside. Scroll 8.075–8.675 uses complementary hard, slanted CSS clip polygons on the arena/sky and Projects, revealing the yellow section from below. Projects content holds its screen position while the boundary passes, then resumes normal scrolling. Palette changes at ground contact; the arena sky keeps its original colours until the cut finishes. Reverse scrolling reverses the boundary and camera descent. The DOM copies of introduction, timeline and skills are visually suppressed while rendered in the arena.

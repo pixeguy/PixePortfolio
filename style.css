@@ -216,7 +216,7 @@ html.is-navigating .cursor-blob { visibility: hidden; }
 .hero-lettering-ready .name-word { color: transparent; }
 .hero-lettering-ready #hero-social-links a { border-color: transparent; }
 .hero-lettering-ready #hero-social-links svg { visibility: hidden; }
-#name-backdrop.is-typing { visibility: visible; }
+#name-backdrop.is-ready { visibility: visible; }
 #hero-social-links { position: absolute; top: 100%; left: .045em; display: flex; gap: 1.25rem; margin-top: 1.5rem; pointer-events: auto; line-height: 1; }
 #hero-social-links[hidden] { display: none; }
 #hero-social-links a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid currentColor; border-radius: 50%; color: var(--accent-color); }
@@ -652,3 +652,12 @@ body.video-pointer-active .cursor-blob { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   #hero-social-links a, .contact-social-links a, .project-game-link { transition: none; }
 }
+
+/* The accessible copy remains in the DOM while its arena plane is visible. */
+.arena-world-copy #fighting-content { opacity: 0 !important; }
+.arena-world-copy .journey-timeline { opacity: 0 !important; }
+.arena-world-copy #skills-section { opacity: 0 !important; }
+.ground-projects #fighting-section { visibility: hidden; }
+.ground-projects #portfolio { transition: none; }
+.hologram-controls { top: auto; bottom: 1rem; right: 1rem; max-height: 55svh; overflow-y: auto; }
+.hologram-controls label { grid-template-columns: 100px 1fr 40px; }
